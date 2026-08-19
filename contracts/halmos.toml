@@ -1,0 +1,6 @@
+[global]
+contract = ".*Symbolic.*"
+
+loop = 4
+
+solver-timeout-assertion = 60000

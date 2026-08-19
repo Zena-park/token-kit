@@ -1,0 +1,53 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+optimizer = true
+optimizer_runs = 200
+
+# CREATE2 address reproducibility.
+#
+# The factory promises "same deployer, same name, same salt -> same address on
+# every chain". That promise holds only if the creation code is byte-identical
+# across builds. Solidity appends a metadata hash to the bytecode by default,
+# and that hash covers source paths and comments -- so adding a single comment
+# would silently change every predicted address.
+bytecode_hash = "none"
+cbor_metadata = false
+
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "forge-std/=lib/forge-std/src/",
+]
+
+[fmt]
+# `lib` is someone else's code; a broad `forge fmt` must not rewrite it.
+ignore = ["lib/**"]
+line_length = 100
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+quote_style = "double"
+number_underscore = "thousands"
+multiline_func_header = "attributes_first"
+sort_imports = false
+
+[lint]
+# Lint our code only. `lib` is someone else's.
+lint_on_build = true
+severity = ["high", "med", "low"]
+exclude_lints = [
+    # Rewriting EIP-712 struct hashing in inline assembly turns
+    # `keccak256(abi.encode(TYPEHASH, from, to, value, ...))` into a sequence of
+    # mstore calls. The order and count of the struct fields disappear from view,
+    # and getting the order wrong produces a signature that silently fails to
+    # recover -- the most expensive class of bug in this repository.
+    #
+    # The saving is on the order of 0.1% of a payment, and has not been measured
+    # here. The decision rests on readability at the error-prone spot, not on
+    # that figure. See docs/adr/004-inline-assembly-hashing.md
+    "asm-keccak256",
+]
+ignore = ["lib/**", "test/**/*.sol"]

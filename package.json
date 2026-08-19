@@ -1,0 +1,21 @@
+{
+  "name": "token-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A modular kit for ERC-20 payment tokens — controlled issuance, compliance switches, signature-based transfers; immutable or upgradeable",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "solhint": "^6.2.4"
+  },
+  "scripts": {
+    "build": "forge build --root contracts",
+    "test": "forge test --root contracts",
+    "sizes": "forge build --root contracts --sizes",
+    "fmt": "forge fmt --root contracts",
+    "fmt:check": "forge fmt --check --root contracts",
+    "lint:forge": "forge lint --root contracts",
+    "lint:solhint": "cd contracts && solhint 'src/**/*.sol'",
+    "lint": "npm run lint:forge && npm run lint:solhint",
+    "check": "npm run fmt:check && npm run lint && npm run test"
+  }
+}
