@@ -78,10 +78,11 @@ one of the shipped ones:
 forge install Zena-park/token-kit
 ```
 
-Add the remappings — the kit's modules import OpenZeppelin through its own
-vendored submodules, so no separate install is needed. (The two
-`@openzeppelin` lines mirror `contracts/foundry.toml`'s own remappings,
-re-rooted under `lib/token-kit/`.)
+Put the remappings in a `remappings.txt` at your project root (or in the
+`remappings` array of your `foundry.toml`). The kit's modules import
+OpenZeppelin through its own vendored submodules, so no separate install is
+needed. (The two `@openzeppelin` lines mirror `contracts/foundry.toml`'s own
+remappings, re-rooted under `lib/token-kit/`.)
 
 ```
 token-kit/=lib/token-kit/contracts/src/
