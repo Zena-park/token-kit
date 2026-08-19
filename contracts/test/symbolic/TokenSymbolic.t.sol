@@ -308,9 +308,7 @@ contract FullTokenSymbolic is Test {
 
     /// @notice Removing a controller leaves its minter with no authority and
     ///         no budget -- nothing remains mintable through it.
-    function check_removing_controller_leaves_nothing_mintable(address to, uint256 amount)
-        public
-    {
+    function check_removing_controller_leaves_nothing_mintable(address to, uint256 amount) public {
         vm.prank(admin);
         token.removeController(controller);
 
