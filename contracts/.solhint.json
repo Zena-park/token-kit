@@ -1,0 +1,60 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "compiler-version": [
+      "error",
+      "0.8.24"
+    ],
+    "func-visibility": [
+      "error",
+      {
+        "ignoreConstructors": true
+      }
+    ],
+    "not-rely-on-time": "off",
+    "no-inline-assembly": "off",
+    "avoid-low-level-calls": "off",
+    "max-line-length": [
+      "error",
+      100
+    ],
+    "ordering": "off",
+    "gas-custom-errors": "error",
+    "reason-string": "off",
+    "no-empty-blocks": "off",
+    "quotes": [
+      "error",
+      "double"
+    ],
+    "const-name-snakecase": "error",
+    "func-param-name-mixedcase": "error",
+    "modifier-name-mixedcase": "error",
+    "private-vars-leading-underscore": [
+      "error",
+      {
+        "strict": false
+      }
+    ],
+    "use-natspec": "off",
+    "gas-indexed-events": "off",
+    "gas-calldata-parameters": "off",
+    "gas-small-strings": "off",
+    "gas-strict-inequalities": "off",
+    "gas-named-return-values": "off",
+    "gas-increment-by-one": "off",
+    "gas-length-in-loops": "off",
+    "gas-multitoken1155": "off",
+    "import-path-check": "off",
+    "no-unused-import": "error",
+    "no-unused-vars": "error",
+    "duplicated-imports": "error",
+    "imports-order": "off",
+    "check-send-result": "error",
+    "avoid-tx-origin": "error",
+    "avoid-throw": "error",
+    "avoid-suicide": "error",
+    "no-complex-fallback": "error",
+    "multiple-sends": "error",
+    "reentrancy": "error"
+  }
+}

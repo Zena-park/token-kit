@@ -1,0 +1,21 @@
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Korean working notes. The published docs are in docs/ and are English-only;
+# docs-ko/ is a personal scratch space and is deliberately not tracked.
+docs-ko/
+
+# macOS
+.DS_Store
