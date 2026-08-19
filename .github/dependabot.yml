@@ -1,0 +1,23 @@
+# Three ecosystems, one cadence. Every PR these open still has to clear the
+# full CI gate (tests, storage-slot pinning, Slither, Halmos) before merge.
+#
+# Note on gitsubmodule: Dependabot bumps a submodule to the latest commit on
+# its tracked branch, not to the latest release tag. Treat those PRs as a
+# notification that upstream moved; merge a dependency bump only onto a
+# tagged upstream release.
+version: 2
+updates:
+  - package-ecosystem: gitsubmodule
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
