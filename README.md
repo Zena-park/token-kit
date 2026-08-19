@@ -1,5 +1,8 @@
 # token-kit
 
+[![CI](https://github.com/Zena-park/token-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/Zena-park/token-kit/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 A modular kit for ERC-20 payment tokens — controlled issuance, compliance
 switches, and signature-based transfers; immutable or upgradeable, deployed at
 a deterministic address on every chain.
@@ -47,7 +50,7 @@ half is what this kit builds.
 ## Quick start
 
 ```bash
-git clone --recurse-submodules <this repo>
+git clone --recurse-submodules https://github.com/Zena-park/token-kit
 cd token-kit/contracts
 forge test
 ```
@@ -55,12 +58,80 @@ forge test
 ```bash
 forge script script/Deploy.s.sol:Deploy \
   --sig 'deployEip3009Token(string,string,uint8,address,uint96)' \
-  'Acme Won' 'AKRW' 6 $ADMIN 1 --rpc-url $RPC --broadcast
+  'Acme Won' 'AKRW' 6 $ADMIN 1 \
+  --rpc-url $RPC --sender $DEPLOYER --broadcast
 ```
 
 Every preset has its own entry point — `deployMinimalToken`,
 `deployPermitToken`, `deployFullToken`, and `deployUpgradeable*` variants —
-with the same arguments.
+with the same arguments. `--sender` must be the broadcasting key: it becomes
+the issuer, the only account that can hand the token to its admin. The full
+runbook, including the upgradeable path, is in
+[docs/deploying.md](docs/deploying.md).
+
+## Using as a library
+
+To compose your own preset in your own Foundry project rather than deploying
+one of the shipped ones:
+
+```bash
+forge install Zena-park/token-kit
+```
+
+Add the remappings — the kit's modules import OpenZeppelin through its own
+vendored submodules, so no separate install is needed. (The two
+`@openzeppelin` lines mirror `contracts/foundry.toml`'s own remappings,
+re-rooted under `lib/token-kit/`.)
+
+```
+token-kit/=lib/token-kit/contracts/src/
+@openzeppelin/contracts/=lib/token-kit/contracts/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/token-kit/contracts/lib/openzeppelin-contracts-upgradeable/contracts/
+```
+
+Then a preset is an inheritance list plus the funnel resolution:
+
+```solidity
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity 0.8.24;
+
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {TokenBase} from "token-kit/core/TokenBase.sol";
+import {Eip2612} from "token-kit/modules/payment/Eip2612.sol";
+import {SimpleMinter} from "token-kit/modules/issuance/SimpleMinter.sol";
+import {EmergencyPause} from "token-kit/modules/compliance/EmergencyPause.sol";
+
+contract MyToken is TokenBase, Eip2612, SimpleMinter, EmergencyPause {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_, address issuer_)
+        TokenBase(decimals_)
+        initializer
+    {
+        __TokenBase_init(name_, symbol_, issuer_);
+    }
+
+    // Each module that gates a funnel is named once; `super` runs the chain.
+    function _update(address from, address to, uint256 value)
+        internal
+        override(ERC20Upgradeable, EmergencyPause)
+    {
+        super._update(from, to, value);
+    }
+
+    function _approve(address owner, address spender, uint256 value, bool emitEvent)
+        internal
+        override(ERC20Upgradeable, EmergencyPause)
+    {
+        super._approve(owner, spender, value, emitEvent);
+    }
+}
+```
+
+The shipped presets in `contracts/src/presets/` are the reference for which
+overrides each module combination needs — the compiler names every base that
+must be resolved, so a missing one is a build error, not a silent gap. Why
+the design composes this way is
+[docs/adr/002-why-modular.md](docs/adr/002-why-modular.md). Pin the latest
+release tag (see [CHANGELOG.md](CHANGELOG.md)) rather than tracking `main`.
 
 ## Modules
 
@@ -204,8 +275,14 @@ combinations, where `_update` is overridden across three modules.
 
 The off-chain half is not here and cannot be: reserve custody, redemption,
 attestation and the licence to issue. Deploying this satisfies no regulatory
-regime on its own. The code has not been audited and has not been deployed to any
-network.
+regime on its own.
+
+## Security
+
+**Not audited**, and nothing here has been deployed to a production network.
+The review record is [docs/security-review.md](docs/security-review.md);
+what needs an audit, and how to report a vulnerability, is
+[SECURITY.md](SECURITY.md).
 
 ## Licence
 
