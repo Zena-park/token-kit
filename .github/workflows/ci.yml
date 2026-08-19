@@ -1,0 +1,79 @@
+# package.json owns the gate list; the checks job invokes `npm run check`
+# so CI and a local run cannot drift apart. Slither and Halmos — the two
+# analyzers from docs/security-review.md — run as their own jobs.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: fmt · lint · solhint · test · sizes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            contracts/cache
+            contracts/out
+          key: forge-${{ runner.os }}-${{ hashFiles('contracts/foundry.toml', 'contracts/foundry.lock') }}-${{ github.sha }}
+          restore-keys: |
+            forge-${{ runner.os }}-${{ hashFiles('contracts/foundry.toml', 'contracts/foundry.lock') }}-
+
+      - run: npm ci
+
+      - run: npm run check
+
+      - run: npm run sizes
+
+  slither:
+    name: slither
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: crytic/slither-action@v0.4.1
+        with:
+          target: contracts
+          slither-config: contracts/slither.config.json
+          fail-on: low
+
+  halmos:
+    name: halmos (symbolic)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install halmos==0.3.3
+
+      - run: halmos

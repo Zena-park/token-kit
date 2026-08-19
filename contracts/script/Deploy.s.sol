@@ -112,8 +112,9 @@ contract Deploy is Script {
         address admin,
         uint96 entropy
     ) public returns (address) {
-        return
-            _deployImmutable(type(FullToken).creationCode, name, symbol, decimals, admin, entropy);
+        return _deployImmutable(
+            type(FullToken).creationCode, name, symbol, decimals, admin, entropy
+        );
     }
 
     // ---------------------------------------------------------------
@@ -280,7 +281,8 @@ contract Deploy is Script {
             abi.encodePacked(
                 type(ERC1967Proxy).creationCode,
                 abi.encode(
-                    implementation, abi.encodeCall(TokenBase.initializeToken, (name, symbol, issuer))
+                    implementation,
+                    abi.encodeCall(TokenBase.initializeToken, (name, symbol, issuer))
                 )
             ),
             false
