@@ -29,8 +29,8 @@ for at least that long.
 ## Reporting a vulnerability
 
 Report privately through
-[GitHub Security Advisories](../../security/advisories/new) — the
-"Report a vulnerability" button on this repository's Security tab. That flow
+[GitHub Security Advisories](https://github.com/Zena-park/token-kit/security/advisories/new)
+— the "Report a vulnerability" button on this repository's Security tab. That flow
 supports collaboration: you can be invited to a private fork to work on the
 fix together, and the advisory — with your credit — is published once the fix
 is out. Private-first means the publication is delayed, not that it never
