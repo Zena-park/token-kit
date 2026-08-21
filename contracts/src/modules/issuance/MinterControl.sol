@@ -28,14 +28,17 @@ import {Guardian} from "../Guardian.sol";
  *
  *  The Minter mints but cannot raise its own allowance; only the Controller can.
  *  Minting arbitrarily therefore requires two distinct keys, and the contract
- *  enforces that they are distinct: a Controller cannot be appointed over
- *  itself, and no Minter can have two Controllers.
+ *  enforces that they are distinct: an address is a Controller or a Minter,
+ *  never both -- so it cannot be appointed over itself, cannot be appointed
+ *  over the account that manages it, and no Minter can have two Controllers.
  *
  *  | Key leaked      | Damage                                            |
  *  |-----------------|---------------------------------------------------|
  *  | Minter only     | Up to the remaining allowance, and no further      |
  *  | Controller only | Can raise allowance but cannot mint                |
- *  | Both            | Unbounded -- so they belong in different custody   |
+ *  | Both            | Unbounded -- so they belong in different custody.  |
+ *  |                 | One address can never hold both ends; two keys     |
+ *  |                 | in one custody is the remaining operational risk.  |
  *
  * @dev The allowance is a drawdown budget, not a rate limit
  *
@@ -188,6 +191,7 @@ abstract contract MinterControl is TokenBase, Guardian {
     error ControllerAlreadyAssigned(address controller);
     error MinterAlreadyManaged(address minter);
     error ControllerCannotBeItsMinter();
+    error AddressAlreadyPaired(address account);
     error NoPendingController(address controller);
     error ControllerNotReady(uint48 eta);
     error ControllerExpired(uint48 eta);
@@ -283,7 +287,15 @@ abstract contract MinterControl is TokenBase, Guardian {
     }
 
     /// @notice Remove a Controller, and with it the Minter it manages.
-    /// @dev Immediate. Revocation never waits.
+    /// @dev Immediate. Revocation never waits. Pending appointments are not
+    ///      touched: one scheduled over the freed Minter before this call, and
+    ///      still inside its window, becomes executable again. Clearing them
+    ///      here would need a by-Minter index of pending Controllers -- many
+    ///      may be pending over one Minter, so a set with removal on every
+    ///      schedule, execute and cancel, not a slot -- for a case that is
+    ///      not inconsistent state: what revives is an appointment the admin
+    ///      announced, re-checked at execution, that the Guardian can cancel.
+    ///      An admin freeing a Minter scans `ControllerScheduled` for it.
     function removeController(address controller) external onlyRole(DEFAULT_ADMIN_ROLE) {
         MinterControlStorage storage $ = _minterControlStorage();
         address minter = $.controllerToMinter[controller];
@@ -362,13 +374,22 @@ abstract contract MinterControl is TokenBase, Guardian {
     // ---------------------------------------------------------------
 
     /**
-     * @dev The two conditions that keep issuance authority split.
+     * @dev The conditions that keep issuance authority split.
      *
      *      A Controller that is also its own Minter could raise its own budget
      *      and then spend it, which is the one thing this module exists to
      *      prevent. Two Controllers over one Minter would mean either of them
      *      can refill a budget the other set, and removing one would silently
      *      deactivate the Minter the other is still managing.
+     *
+     *      The last two checks close the indirect form of the first. With A
+     *      managing B, appointing B over A would let each key refill the
+     *      budget the other spends -- one custody holding both ends of two
+     *      pairs is the same failure as one key holding both ends of one.
+     *      The rule enforced is stronger than "no cycle": an address is a
+     *      Controller or a Minter, never both, so a chain A -> B -> C is
+     *      refused too. A chain concentrates authority even where it widens
+     *      nobody's own budget, and a graph walk is not on-chain work.
      */
     function _requireAppointable(address controller, address minter) private view {
         if (controller == minter) revert ControllerCannotBeItsMinter();
@@ -379,6 +400,12 @@ abstract contract MinterControl is TokenBase, Guardian {
         }
         if ($.minterToController[minter] != address(0)) {
             revert MinterAlreadyManaged(minter);
+        }
+        if ($.minterToController[controller] != address(0)) {
+            revert AddressAlreadyPaired(controller);
+        }
+        if ($.controllerToMinter[minter] != address(0)) {
+            revert AddressAlreadyPaired(minter);
         }
     }
 

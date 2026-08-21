@@ -499,4 +499,64 @@ contract Eip3009Test is Helpers {
             token, key, _authHash(typehash, from, to, value, validAfter, validBefore, nonce)
         );
     }
+
+    // ---------------------------------------------------------------
+    // Window boundaries
+    // ---------------------------------------------------------------
+
+    /// @dev The EIP's window is open: `validAfter < now < validBefore`. Both
+    ///      endpoints are outside it, which is what a client computing
+    ///      "valid from now" has to know.
+    function test_the_validity_window_excludes_both_endpoints() public {
+        uint256 now_ = block.timestamp;
+
+        bytes32 n1 = keccak256("after");
+        bytes memory atAfter = _signAuth(
+            token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(),
+            payerKey,
+            payer,
+            shop,
+            UNIT,
+            now_,
+            now_ + 1 days,
+            n1
+        );
+        vm.prank(facilitator);
+        vm.expectRevert(Eip3009.AuthorizationNotYetValid.selector);
+        token.transferWithAuthorization(payer, shop, UNIT, now_, now_ + 1 days, n1, atAfter);
+
+        bytes32 n2 = keccak256("before");
+        bytes memory atBefore = _signAuth(
+            token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(), payerKey, payer, shop, UNIT, 0, now_, n2
+        );
+        vm.prank(facilitator);
+        vm.expectRevert(Eip3009.AuthorizationExpired.selector);
+        token.transferWithAuthorization(payer, shop, UNIT, 0, now_, n2, atBefore);
+    }
+
+    /// @dev A disowning ERC-1271 answer and a revert from code with no
+    ///      ERC-1271 at all are both an invalid signature, and leave the nonce
+    ///      unspent.
+    function test_smart_account_rejections_leave_the_nonce_unspent() public {
+        bytes32 nonce = keccak256("order-1");
+        address[2] memory froms =
+            [address(new MockSmartAccount(makeAddr("someone-else"))), address(token)];
+
+        for (uint256 i = 0; i < froms.length; ++i) {
+            bytes memory sig = _signAuth(
+                token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(),
+                payerKey,
+                froms[i],
+                shop,
+                UNIT,
+                0,
+                _future(),
+                nonce
+            );
+            vm.prank(facilitator);
+            vm.expectRevert(TokenBase.InvalidSignature.selector);
+            token.transferWithAuthorization(froms[i], shop, UNIT, 0, _future(), nonce, sig);
+            assertFalse(token.authorizationState(froms[i], nonce));
+        }
+    }
 }

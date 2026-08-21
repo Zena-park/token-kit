@@ -318,4 +318,66 @@ contract MinterControlTest is Helpers {
 
         assertEq(token.controllerToMinter(lateController), address(0));
     }
+
+    // ---------------------------------------------------------------
+    // An address is a Controller or a Minter, never both
+    // ---------------------------------------------------------------
+
+    /// @dev The indirect form of self-management: with A over B, appointing B
+    ///      over A would let each key refill the budget the other spends.
+    function test_a_managed_minter_cannot_become_a_controller() public {
+        address ctrl = grantMint(token, admin, minter, 100 * UNIT);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(MinterControl.AddressAlreadyPaired.selector, minter));
+        token.scheduleController(minter, ctrl);
+    }
+
+    function test_a_controller_cannot_become_a_minter() public {
+        address ctrl = grantMint(token, admin, minter, 100 * UNIT);
+        address second = makeAddr("second-controller");
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(MinterControl.AddressAlreadyPaired.selector, ctrl));
+        token.scheduleController(second, ctrl);
+    }
+
+    // ---------------------------------------------------------------
+    // Revocation and re-activation
+    // ---------------------------------------------------------------
+
+    /// @dev A Controller that removed its Minter can activate it again; the
+    ///      pairing was never broken, only the Minter's authority. Pinned so
+    ///      the intent is stated rather than assumed.
+    function test_a_controller_can_reactivate_a_minter_it_removed() public {
+        address ctrl = grantMint(token, admin, minter, 100 * UNIT);
+
+        vm.startPrank(ctrl);
+        token.removeMinter();
+        assertFalse(token.isMinter(minter));
+        token.configureMinter(50 * UNIT);
+        vm.stopPrank();
+
+        assertTrue(token.isMinter(minter));
+        assertEq(token.minterAllowance(minter), 50 * UNIT);
+    }
+
+    /// @dev Pins the documented behaviour (ADR-003) so a change to it is
+    ///      deliberate.
+    function test_removing_a_controller_revives_a_pending_appointment_over_its_minter() public {
+        address late = makeAddr("late-controller");
+
+        vm.prank(admin);
+        token.scheduleController(late, minter); // pending over `minter`
+        address ctrl = grantMint(token, admin, minter, 100 * UNIT); // a different pair lands first
+
+        vm.expectRevert(abi.encodeWithSelector(MinterControl.MinterAlreadyManaged.selector, minter));
+        token.executeController(late);
+
+        vm.prank(admin);
+        token.removeController(ctrl);
+
+        token.executeController(late);
+        assertEq(token.controllerToMinter(late), minter);
+    }
 }

@@ -5,6 +5,7 @@ import {Helpers, MockSmartAccount} from "../helpers/Helpers.sol";
 import {Eip3009Token} from "../../src/presets/Eip3009Token.sol";
 import {Eip2612} from "../../src/modules/payment/Eip2612.sol";
 import {TokenBase} from "../../src/core/TokenBase.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract Eip2612Test is Helpers {
     Eip3009Token token;
@@ -94,9 +95,8 @@ contract Eip2612Test is Helpers {
         MockSmartAccount account = new MockSmartAccount(holder);
         uint256 deadline = block.timestamp + 1 hours;
 
-        bytes memory sig = signTyped(
-            token, holderKey, _permitHash(address(account), spender, 100 * UNIT, deadline)
-        );
+        bytes memory sig =
+            _signPermitBytes(holderKey, address(account), spender, 100 * UNIT, deadline);
 
         token.permit(address(account), spender, 100 * UNIT, deadline, sig);
 
@@ -131,6 +131,17 @@ contract Eip2612Test is Helpers {
         );
     }
 
+    /// @dev Packed form, for the ERC-1271-capable overload.
+    function _signPermitBytes(
+        uint256 key,
+        address owner,
+        address spender_,
+        uint256 value,
+        uint256 deadline
+    ) private view returns (bytes memory) {
+        return signTyped(token, key, _permitHash(owner, spender_, value, deadline));
+    }
+
     function _signPermit(
         uint256 key,
         address owner,
@@ -139,5 +150,70 @@ contract Eip2612Test is Helpers {
         uint256 deadline
     ) private view returns (uint8 v, bytes32 r, bytes32 s) {
         (v, r, s) = signTypedVRS(token, key, _permitHash(owner, spender_, value, deadline));
+    }
+
+    // ---------------------------------------------------------------
+    // Rejections
+    // ---------------------------------------------------------------
+
+    /// @dev The bytes overload verifies through the same path as the triple,
+    ///      so a signature by the wrong key fails it identically.
+    function test_bytes_overload_rejects_a_signature_by_someone_else() public {
+        uint256 deadline = block.timestamp + 1 hours;
+        bytes memory sig = _signPermitBytes(0xBAD, holder, spender, 100 * UNIT, deadline);
+
+        vm.expectRevert(TokenBase.InvalidSignature.selector);
+        token.permit(holder, spender, 100 * UNIT, deadline, sig);
+    }
+
+    /// @dev EIP-2612 requires a zero owner to be refused. `ecrecover` returns
+    ///      zero for a garbage signature, so without the refusal a garbage
+    ///      signature would set an allowance for the zero address.
+    function test_permit_refuses_the_zero_owner() public {
+        uint256 deadline = block.timestamp + 1 hours;
+
+        vm.expectRevert(TokenBase.InvalidSignature.selector);
+        token.permit(address(0), spender, 100 * UNIT, deadline, 27, bytes32(0), bytes32(0));
+    }
+
+    /// @dev A disowning ERC-1271 answer and a revert from code with no
+    ///      ERC-1271 at all are both read as an invalid signature.
+    function test_smart_account_rejections_are_invalid_signatures() public {
+        uint256 deadline = block.timestamp + 1 hours;
+        address[2] memory owners =
+            [address(new MockSmartAccount(makeAddr("someone-else"))), address(token)];
+
+        for (uint256 i = 0; i < owners.length; ++i) {
+            bytes memory sig = _signPermitBytes(holderKey, owners[i], spender, 100 * UNIT, deadline);
+            vm.expectRevert(TokenBase.InvalidSignature.selector);
+            token.permit(owners[i], spender, 100 * UNIT, deadline, sig);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Interaction with the compliance modules
+    // ---------------------------------------------------------------
+
+    /// @dev `permit` writes through `_approve`, so it crosses the same gate as
+    ///      `approve`: under a pause a raise is stopped and a lowering is not,
+    ///      because lowering is revocation. (The listing gates are proved for
+    ///      `_approve` in Compliance.t.sol.)
+    function test_permit_crosses_the_same_gate_as_approve() public {
+        uint256 deadline = block.timestamp + 1 hours;
+        vm.startPrank(admin);
+        token.grantRole(token.PAUSER_ROLE(), admin);
+        token.pause();
+        vm.stopPrank();
+
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signPermit(holderKey, holder, spender, 100 * UNIT, deadline);
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        token.permit(holder, spender, 100 * UNIT, deadline, v, r, s);
+
+        // The revert did not move the nonce, so the next signature is nonce 0.
+        (v, r, s) = _signPermit(holderKey, holder, spender, 0, deadline);
+        token.permit(holder, spender, 0, deadline, v, r, s);
+        assertEq(token.allowance(holder, spender), 0);
+        assertEq(token.nonces(holder), 1);
     }
 }

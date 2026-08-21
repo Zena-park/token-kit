@@ -25,6 +25,22 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- `MinterControl`: an address is a Controller or a Minter, never both, in any
+  pairing -- the indirect form of self-management (A manages B, B manages A)
+  is refused with `AddressAlreadyPaired`, at scheduling and at execution.
+  `removeController` leaving pending appointments in place is now documented
+  (ADR-003), with the operating procedure.
+- `UpgradeControl.upgradeToAndCall` refuses ether with `ValueNotAccepted`; the
+  proxy has no way to return it.
+- `Eip2612` header documents the standard permit front-run property and the
+  try/catch an integrator should use.
+- Tests: ERC-1271 rejections (disowning account, non-ERC-1271 code), a zero
+  `permit` owner, EIP-3009 window endpoints, `permit` under a pause, seizure
+  against a shrunk balance, cancelling a lapsed seizure, Minter
+  re-activation, the revived-appointment case, the bare implementation
+  refusing an upgrade; symbolic properties for the allowance-raise boundary
+  under a pause and a listing. The ERC-1271 test mock answers a bad signature
+  with the failure value instead of reverting, as a real account does.
 - CI: actions pinned to commit SHAs and forge to an exact release;
   `foundry.lock` records all three libraries; Dependabot no longer tracks
   submodules (see CONTRIBUTING.md).
