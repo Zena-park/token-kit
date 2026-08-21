@@ -16,3 +16,9 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # The OpenZeppelin packages are a canary: security advisories should
+    # reach us, ordinary releases should not open PRs -- moving to one is a
+    # submodule upgrade, made by hand. `ignore` only silences version
+    # updates; Dependabot security updates are unaffected by it.
+    ignore:
+      - dependency-name: "@openzeppelin/*"

@@ -45,9 +45,9 @@ Ground rules the codebase holds itself to:
   submodules; it follows branch heads.
 - `package.json` carries `@openzeppelin/contracts` and
   `@openzeppelin/contracts-upgradeable` pinned to that same release as an
-  advisory canary: GitHub's alerts and Dependabot's release bumps fire for
-  them, and a bump is the signal to move the submodules -- all three in one
-  PR. Nothing compiles against the npm copies: `contracts/foundry.toml` maps
+  advisory canary: GitHub's security alerts fire for them (ordinary release
+  bumps are ignored in `dependabot.yml`), and an alert is the signal to move
+  the submodules -- all three in one PR. Nothing compiles against the npm copies: `contracts/foundry.toml` maps
   `@openzeppelin/` to the submodules explicitly, and `node_modules` lives
   outside the Foundry root.
 - `forge-std` is test-only and is moved on its own (`forge update
