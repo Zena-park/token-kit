@@ -1,6 +1,6 @@
 {
   "name": "token-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A modular kit for ERC-20 payment tokens — controlled issuance, compliance switches, signature-based transfers; immutable or upgradeable",
   "license": "Apache-2.0",
