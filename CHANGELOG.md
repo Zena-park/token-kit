@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-22
+
+The security-audit release: every finding of the 2026-08-21 audit and the
+2026-08-22 re-audit is closed here, and OpenZeppelin moves to v5.6.1. No
+critical, high or medium finding existed; what changed is the EIP-3009
+surface, the Controller/Minter invariant, a typed refusal in the deploy
+script, CI pinning, and tests. **CREATE2 addresses differ from v0.1.0** --
+see Changed.
+
 ### Added
 
 - `Eip3009`: the `(v, r, s)` functions EIP-3009 defines --
@@ -100,4 +109,6 @@ Initial release.
   ([docs/security-review.md](docs/security-review.md)).
 - Documentation: five ADRs, a deployment runbook, and measured gas costs.
 
+[Unreleased]: https://github.com/Zena-park/token-kit/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Zena-park/token-kit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Zena-park/token-kit/releases/tag/v0.1.0
