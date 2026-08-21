@@ -86,8 +86,11 @@ The contract enforces the part of that it can see: an address is a Controller
 or a Minter, never both. The direct form — appointing a key over itself — is
 the obvious one. The indirect form is A managing B while B manages A: each key
 then refills the budget the other spends, and one custody holding both is the
-same failure as one key holding both ends of one pair. Both forms are refused
-at scheduling and again at execution.
+same failure as one key holding both ends of one pair. The same checks run at
+scheduling and again at execution, and a Minter with its own appointment
+pending as a Controller is refused as well, so a cycle cannot be announced in
+two calls and left to whoever executes first. Appointments pending *over* a
+Minter are not indexed, so that one shape fails only at execution.
 
 Removing a Controller does not cancel appointments still pending over the
 Minter it frees; one inside its window becomes executable again. It was

@@ -192,6 +192,7 @@ abstract contract MinterControl is TokenBase, Guardian {
     error MinterAlreadyManaged(address minter);
     error ControllerCannotBeItsMinter();
     error AddressAlreadyPaired(address account);
+    error PendingAppointment(address account);
     error NoPendingController(address controller);
     error ControllerNotReady(uint48 eta);
     error ControllerExpired(uint48 eta);
@@ -390,6 +391,13 @@ abstract contract MinterControl is TokenBase, Guardian {
      *      Controller or a Minter, never both, so a chain A -> B -> C is
      *      refused too. A chain concentrates authority even where it widens
      *      nobody's own budget, and a graph walk is not on-chain work.
+     *
+     *      The same checks run at scheduling and again at execution. A Minter
+     *      with its own appointment pending as a Controller is refused too, so
+     *      a cycle cannot be announced in two calls and left to whoever
+     *      executes first. Appointments pending *over* a Minter are not
+     *      indexed (see `removeController`), so that shape fails only at
+     *      execution.
      */
     function _requireAppointable(address controller, address minter) private view {
         if (controller == minter) revert ControllerCannotBeItsMinter();
@@ -406,6 +414,9 @@ abstract contract MinterControl is TokenBase, Guardian {
         }
         if ($.controllerToMinter[minter] != address(0)) {
             revert AddressAlreadyPaired(minter);
+        }
+        if ($.pendingController[minter].eta != 0) {
+            revert PendingAppointment(minter);
         }
     }
 

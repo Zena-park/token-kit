@@ -295,6 +295,31 @@ contract Eip3009Test is Helpers {
         assertEq(token.balanceOf(shop), 1000 * UNIT);
     }
 
+    /// @dev The payee check lives once, in the bytes form; the EIP form reaches
+    ///      it by calling that function. Pinned so a refactor that pointed the
+    ///      EIP form at the shared helper directly could not reopen the hole.
+    function test_receive_eip_form_rejects_anyone_but_the_payee() public {
+        bytes32 nonce = keccak256("order-1");
+        (uint8 v, bytes32 r, bytes32 s) = _signAuthVRS(
+            token.RECEIVE_WITH_AUTHORIZATION_TYPEHASH(),
+            payerKey,
+            payer,
+            shop,
+            1000 * UNIT,
+            0,
+            _future(),
+            nonce
+        );
+
+        vm.prank(facilitator);
+        vm.expectRevert(Eip3009.CallerMustBePayee.selector);
+        token.receiveWithAuthorization(payer, shop, 1000 * UNIT, 0, _future(), nonce, v, r, s);
+
+        vm.prank(shop);
+        token.receiveWithAuthorization(payer, shop, 1000 * UNIT, 0, _future(), nonce, v, r, s);
+        assertEq(token.balanceOf(shop), 1000 * UNIT);
+    }
+
     /// @dev The two functions hash different type strings, so a signature for
     ///      one must not satisfy the other.
     function test_transfer_signature_does_not_work_for_receive() public {

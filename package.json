@@ -5,6 +5,8 @@
   "description": "A modular kit for ERC-20 payment tokens — controlled issuance, compliance switches, signature-based transfers; immutable or upgradeable",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@openzeppelin/contracts": "5.1.0",
+    "@openzeppelin/contracts-upgradeable": "5.1.0",
     "solhint": "^6.2.4"
   },
   "scripts": {
@@ -16,6 +18,7 @@
     "lint:forge": "forge lint --root contracts",
     "lint:solhint": "cd contracts && solhint 'src/**/*.sol'",
     "lint": "npm run lint:forge && npm run lint:solhint",
-    "check": "npm run fmt:check && npm run lint && npm run test"
+    "lock:check": "node scripts/check-foundry-lock.mjs",
+    "check": "npm run fmt:check && npm run lint && npm run lock:check && npm run test"
   }
 }

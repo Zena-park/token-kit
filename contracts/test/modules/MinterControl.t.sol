@@ -342,6 +342,43 @@ contract MinterControlTest is Helpers {
         token.scheduleController(second, ctrl);
     }
 
+    /// @dev A cycle cannot be announced in two calls, so no outsider gets to
+    ///      pick which half lands.
+    function test_a_cycle_cannot_be_scheduled_while_its_first_half_is_pending() public {
+        address a = makeAddr("a");
+        address b = makeAddr("b");
+
+        vm.startPrank(admin);
+        token.scheduleController(a, b);
+        vm.expectRevert(abi.encodeWithSelector(MinterControl.PendingAppointment.selector, a));
+        token.scheduleController(b, a);
+        vm.stopPrank();
+    }
+
+    /// @dev a -> b then b -> c passes scheduling (b is only a pending Minter)
+    ///      but cannot land as a chain: at most one pair lands.
+    function test_a_chain_through_a_pending_minter_cannot_land() public {
+        address a = makeAddr("a");
+        address b = makeAddr("b");
+        address c = makeAddr("c");
+
+        vm.startPrank(admin);
+        token.scheduleController(a, b);
+        token.scheduleController(b, c);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + token.CONTROLLER_DELAY());
+
+        vm.expectRevert(abi.encodeWithSelector(MinterControl.PendingAppointment.selector, b));
+        token.executeController(a);
+
+        token.executeController(b);
+        assertEq(token.controllerToMinter(b), c);
+
+        vm.expectRevert(abi.encodeWithSelector(MinterControl.AddressAlreadyPaired.selector, b));
+        token.executeController(a);
+    }
+
     // ---------------------------------------------------------------
     // Revocation and re-activation
     // ---------------------------------------------------------------
