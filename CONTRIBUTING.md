@@ -38,14 +38,24 @@ Ground rules the codebase holds itself to:
 ## Updating dependencies
 
 - The two OpenZeppelin submodules are pinned to one and the same release tag
-  (`contracts/foundry.lock` records which). Move them together, to a tag,
-  and re-run `npm run check` — `test/StorageSlots.t.sol` and
-  `test/presets/Upgradeable.t.sol` are what catch a layout change upstream.
-  Dependabot deliberately does not track submodules; it follows branch heads.
-- `forge-std` is test-only and may sit on any commit `forge install` records.
+  (`contracts/foundry.lock` records which, and CI checks the checkout against
+  it). Move them together, to a tag, and re-run `npm run check` —
+  `test/StorageSlots.t.sol` and `test/presets/Upgradeable.t.sol` are what
+  catch a layout change upstream. Dependabot deliberately does not track
+  submodules; it follows branch heads.
+- `package.json` carries `@openzeppelin/contracts` and
+  `@openzeppelin/contracts-upgradeable` pinned to that same release as an
+  advisory canary: GitHub's alerts and Dependabot's release bumps fire for
+  them, and a bump is the signal to move the submodules -- all three in one
+  PR. Nothing compiles against the npm copies: `contracts/foundry.toml` maps
+  `@openzeppelin/` to the submodules explicitly, and `node_modules` lives
+  outside the Foundry root.
+- `forge-std` is test-only and is moved on its own (`forge update
+  lib/forge-std` rewrites its `foundry.lock` entry).
 - GitHub Actions are pinned to commit SHAs; Dependabot keeps those current.
   The forge release in `ci.yml` is bumped by hand, together with the local
-  toolchain.
+  toolchain. `solc` and `evm_version` are pinned in `foundry.toml`; changing
+  either changes every CREATE2 address (see the deploying guide).
 
 ## Pull requests
 

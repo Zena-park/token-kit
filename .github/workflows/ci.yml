@@ -2,10 +2,10 @@
 # so CI and a local run cannot drift apart. Slither and Halmos — the two
 # analyzers from docs/security-review.md — run as their own jobs.
 #
-# Forge is pinned to an exact release. solc is pinned in foundry.toml, so the
-# bytecode -- and every CREATE2 address -- never depended on the forge
-# version; `forge lint` does, and it runs on every build. Bump it by hand
-# together with the local toolchain.
+# Forge is pinned to an exact release. solc and evm_version are pinned in
+# foundry.toml, so the bytecode -- and every CREATE2 address -- does not
+# depend on the forge version; `forge lint` does, and it runs on every build.
+# Bump it by hand together with the local toolchain.
 name: CI
 
 on:

@@ -10,7 +10,7 @@ design trade-off explicitly documented in the code and docs.
 
 | Metric | Result |
 |---|---|
-| Foundry tests | 136 / 136 passing (8 suites, including the deploy script) |
+| Foundry tests | 139 / 139 passing (8 suites, including the deploy script) |
 | Halmos symbolic properties | 21 / 21 verified |
 | Slither (75 detectors) | 0 findings |
 | Secret / key exposure | none |
@@ -59,8 +59,10 @@ design trade-off explicitly documented in the code and docs.
 ### Issuance control — MinterControl — safe
 
 - The Controller/Minter separation invariants (an address is a Controller or a
-  Minter, never both, and pairs are 1:1) are checked at both scheduling and
-  execution — a single leaked key cannot mint
+  Minter, never both, and pairs are 1:1) run at scheduling and again at
+  execution; a Minter with its own pending appointment is refused too, and the
+  one shape scheduling cannot see -- an appointment pending over a Minter --
+  fails at execution — a single leaked key cannot mint
   beyond the remaining budget.
 - `burn` does not refund the mint budget, blocking the mint-burn-mint loop.
 - The Guardian freeze is immediate while unfreezing is admin-only — the correct
@@ -71,7 +73,10 @@ design trade-off explicitly documented in the code and docs.
 - The upgrade id commits to both the implementation address and `data` — exactly
   what was announced executes, exactly once.
 - One-day delay + seven-day execution window + Guardian veto. The ERC-1822 check
-  prevents bricking the proxy with a non-upgradeable implementation.
+  rejects a candidate that does not answer as a UUPS implementation -- an
+  accident guard; a candidate that answers correctly but has no working upgrade
+  path would still brick the proxy, which is what the delay and the veto are
+  for.
 - Execution authority is limited by the `DEFAULT_ADMIN_ROLE` check in
   `_authorizeUpgrade`.
 
@@ -146,7 +151,7 @@ design trade-off explicitly documented in the code and docs.
 | Step | Detail |
 |---|---|
 | Full manual review | 1 core, 9 modules, 7 presets, and the Deploy script — all 18 source files read in full |
-| Dynamic verification | `forge test` — 136 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
+| Dynamic verification | `forge test` — 139 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
 | Symbolic verification | Halmos over `test/symbolic/TokenSymbolic.t.sol` — 21 properties verified: supply preservation, exact balance/allowance accounting, mint role and budget bounds, blacklist send/receive blocking, pause totality, the allowance-raise boundary under a pause and a listing, mint freeze, seize preconditions, and the Controller/Minter structure (authority split, 1:1 mapping, timelock + veto, revocation leaves nothing mintable) |
 | Static analysis | Slither, 75 detectors — 0 findings |
 | Secret scan | private key / mnemonic pattern scan — no exposure |

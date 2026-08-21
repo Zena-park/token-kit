@@ -3,7 +3,8 @@
 #
 # Submodules are not tracked: Dependabot follows a branch head, not a release
 # tag, and the two OpenZeppelin libraries must move together onto one tagged
-# release. See CONTRIBUTING.md for how they are updated.
+# release. The two OpenZeppelin npm packages in package.json are an advisory
+# canary for the submodules -- see CONTRIBUTING.md.
 version: 2
 updates:
   - package-ecosystem: github-actions

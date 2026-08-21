@@ -11,6 +11,14 @@ CREATE2 deployer. The address is a function of that deployer, the salt and the
 init code, so the same three inputs give the same address on every chain the
 deployer exists on.
 
+The init code is the compiled preset, so "same" means the same repository
+revision built with the same `solc` and `evm_version` (both pinned in
+`foundry.toml`). Any change to a preset's source -- or to a module it inherits
+-- changes its creation code and therefore every address derived from it,
+including the shared implementation's. Record the git tag and the predicted
+addresses when you deploy the first chain, and deploy every further chain from
+that same tag. Addresses predicted from v0.1.0 do not match the current tree.
+
 Widely deployed options, in the order most people reach for them:
 
 | Deployer | Address | Note |

@@ -25,9 +25,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **Every CREATE2 address differs from v0.1.0.** The presets' creation code
+  changed (EIP-3009 entry points, the MinterControl and UpgradeControl
+  checks), and the address is a function of it. `docs/deploying.md` now says
+  to deploy every chain from one recorded tag. `foundry.toml` pins
+  `evm_version` alongside `solc` so the forge release cannot move it either.
 - `MinterControl`: an address is a Controller or a Minter, never both, in any
   pairing -- the indirect form of self-management (A manages B, B manages A)
-  is refused with `AddressAlreadyPaired`, at scheduling and at execution.
+  is refused with `AddressAlreadyPaired`, and a Minter with its own pending
+  appointment with `PendingAppointment`, at scheduling and again at
+  execution.
   `removeController` leaving pending appointments in place is now documented
   (ADR-003), with the operating procedure.
 - `UpgradeControl.upgradeToAndCall` refuses ether with `ValueNotAccepted`; the
@@ -42,8 +49,10 @@ All notable changes to this project are documented here. The format follows
   under a pause and a listing. The ERC-1271 test mock answers a bad signature
   with the failure value instead of reverting, as a real account does.
 - CI: actions pinned to commit SHAs and forge to an exact release;
-  `foundry.lock` records all three libraries; Dependabot no longer tracks
-  submodules (see CONTRIBUTING.md).
+  `foundry.lock` records all three libraries and CI checks the checkout
+  against it (`npm run lock:check`); Dependabot no longer tracks submodules,
+  and `package.json` carries the two OpenZeppelin packages as an advisory
+  canary (see CONTRIBUTING.md).
 - `Deploy.s.sol`: an explicit `existingImplementation` that is empty, not
   UUPS, or not a kit token now fails as `NotAnImplementation` instead of a
   bare revert from whichever probe it did not answer. `docs/deploying.md` and
