@@ -35,6 +35,18 @@ Ground rules the codebase holds itself to:
 - Comments explain *why*, not *what*. Match the density and tone of the file
   you are editing.
 
+## Updating dependencies
+
+- The two OpenZeppelin submodules are pinned to one and the same release tag
+  (`contracts/foundry.lock` records which). Move them together, to a tag,
+  and re-run `npm run check` — `test/StorageSlots.t.sol` and
+  `test/presets/Upgradeable.t.sol` are what catch a layout change upstream.
+  Dependabot deliberately does not track submodules; it follows branch heads.
+- `forge-std` is test-only and may sit on any commit `forge install` records.
+- GitHub Actions are pinned to commit SHAs; Dependabot keeps those current.
+  The forge release in `ci.yml` is bumped by hand, together with the local
+  toolchain.
+
 ## Pull requests
 
 - Keep commits logical and messages in the imperative
