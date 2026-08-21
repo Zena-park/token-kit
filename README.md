@@ -142,7 +142,7 @@ wants and resolves the overrides.
 | Module | Group | What it adds | What it costs |
 |---|---|---|---|
 | `Eip3009` | payment | Signature transfers with random `bytes32` nonces; any caller submits and pays the gas. The EIP's `(v, r, s)` functions plus a `bytes` form for ERC-1271 signers | Three functions in two forms each, three type hashes and a nonce map in the token |
-| `Eip2612` | payment | `permit` — allowance by signature, ERC-1271 capable | Sequential nonces; concurrent authorizations collide |
+| `Eip2612` | payment | `permit` — allowance by signature; the EIP's `(v, r, s)` form plus a `bytes` form for ERC-1271 signers (`IEip2612`) | Sequential nonces; concurrent authorizations collide |
 | `MinterControl` | issuance | Owner / Controller / Minter / Guardian, drawdown mint budget, timelocked appointments; an address is a Controller or a Minter, never both | Two custodies to run |
 | `SimpleMinter` | issuance | One role, unlimited mint | No ceiling |
 | `Blacklist` | compliance | Freeze an account in both directions | Issuer holds censorship power |

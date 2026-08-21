@@ -10,7 +10,7 @@ design trade-off explicitly documented in the code and docs.
 
 | Metric | Result |
 |---|---|
-| Foundry tests | 139 / 139 passing (8 suites, including the deploy script) |
+| Foundry tests | 140 / 140 passing (8 suites, including the deploy script) |
 | Halmos symbolic properties | 21 / 21 verified |
 | Slither (75 detectors) | 0 findings |
 | Secret / key exposure | none |
@@ -151,7 +151,7 @@ design trade-off explicitly documented in the code and docs.
 | Step | Detail |
 |---|---|
 | Full manual review | 1 core, 9 modules, 7 presets, and the Deploy script — all 18 source files read in full |
-| Dynamic verification | `forge test` — 139 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
+| Dynamic verification | `forge test` — 140 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
 | Symbolic verification | Halmos over `test/symbolic/TokenSymbolic.t.sol` — 21 properties verified: supply preservation, exact balance/allowance accounting, mint role and budget bounds, blacklist send/receive blocking, pause totality, the allowance-raise boundary under a pause and a listing, mint freeze, seize preconditions, and the Controller/Minter structure (authority split, 1:1 mapping, timelock + veto, revocation leaves nothing mintable) |
 | Static analysis | Slither, 75 detectors — 0 findings |
 | Secret scan | private key / mnemonic pattern scan — no exposure |

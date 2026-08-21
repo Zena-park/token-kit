@@ -2,7 +2,9 @@
 pragma solidity 0.8.24;
 
 import {NoncesUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {TokenBase} from "../../core/TokenBase.sol";
+import {IEip2612} from "../../interfaces/IEip2612.sol";
 
 /**
  * @title Eip2612
@@ -29,6 +31,7 @@ import {TokenBase} from "../../core/TokenBase.sol";
  *  path, so contract accounts are accepted via ERC-1271. Both the spec's
  *  `(v, r, s)` form and a `bytes` form are exposed: the triple keeps existing
  *  integrations working, the bytes form is what a contract signature needs.
+ *  Both are declared in `IEip2612`, the file integrators compile against.
  *
  * @dev A permit can be front-run, harmlessly
  *
@@ -50,7 +53,7 @@ import {TokenBase} from "../../core/TokenBase.sol";
  *  have its concurrent authorizations collide. That is the reason the EIP-3009
  *  module exists alongside this one and uses random `bytes32` nonces instead.
  */
-abstract contract Eip2612 is TokenBase, NoncesUpgradeable {
+abstract contract Eip2612 is TokenBase, NoncesUpgradeable, IEip2612 {
     // solhint-disable-next-line max-line-length
     /// @dev keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
     bytes32 public constant PERMIT_TYPEHASH =
@@ -62,6 +65,16 @@ abstract contract Eip2612 is TokenBase, NoncesUpgradeable {
     // solhint-disable-next-line func-name-mixedcase
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparatorV4();
+    }
+
+    /// @dev Declared by both the nonce mixin and the interface; one body.
+    function nonces(address owner)
+        public
+        view
+        override(NoncesUpgradeable, IERC20Permit)
+        returns (uint256)
+    {
+        return super.nonces(owner);
     }
 
     /// @notice Spec form. EOA signers only -- a 65-byte signature cannot carry

@@ -5,6 +5,7 @@ import {Helpers, MockSmartAccount} from "../helpers/Helpers.sol";
 import {Eip3009Token} from "../../src/presets/Eip3009Token.sol";
 import {Eip2612} from "../../src/modules/payment/Eip2612.sol";
 import {TokenBase} from "../../src/core/TokenBase.sol";
+import {IEip2612} from "../../src/interfaces/IEip2612.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract Eip2612Test is Helpers {
@@ -37,6 +38,16 @@ contract Eip2612Test is Helpers {
             keccak256(
                 "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
             )
+        );
+    }
+
+    /// @dev The EIP surface comes from OpenZeppelin's `IERC20Permit`; what this
+    ///      repo declares is the one extension selector, and `interfaceId`
+    ///      excludes inherited members, so that is exactly what is pinned.
+    function test_interface_declares_the_bytes_permit() public pure {
+        assertEq(
+            type(IEip2612).interfaceId,
+            bytes4(keccak256("permit(address,address,uint256,uint256,bytes)"))
         );
     }
 
