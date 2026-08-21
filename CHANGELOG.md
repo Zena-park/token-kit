@@ -54,7 +54,7 @@ All notable changes to this project are documented here. The format follows
   `foundry.lock` records all three libraries and CI checks the checkout
   against it (`npm run lock:check`); Dependabot no longer tracks submodules,
   and `package.json` carries the two OpenZeppelin packages as an advisory
-  canary (see CONTRIBUTING.md).
+  canary -- security alerts only, release bumps ignored (see CONTRIBUTING.md).
 - `Deploy.s.sol`: an explicit `existingImplementation` that is empty, not
   UUPS, or not a kit token now fails as `NotAnImplementation` instead of a
   bare revert from whichever probe it did not answer. `docs/deploying.md` and
