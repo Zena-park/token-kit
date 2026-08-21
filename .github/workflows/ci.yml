@@ -51,7 +51,7 @@ jobs:
         with:
           submodules: true
 
-      - uses: crytic/slither-action@v0.4.1
+      - uses: crytic/slither-action@v0.4.2
         with:
           target: contracts
           slither-config: contracts/slither.config.json
