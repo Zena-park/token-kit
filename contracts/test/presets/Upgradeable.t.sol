@@ -10,7 +10,7 @@ import {UpgradeControl} from "../../src/modules/UpgradeControl.sol";
 import {TokenBase} from "../../src/core/TokenBase.sol";
 import {MinterControl} from "../../src/modules/issuance/MinterControl.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /// @dev A stand-in for a later version. Adds a function the first one lacks so
 ///      an upgrade is observable, and changes nothing about storage.

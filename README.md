@@ -161,19 +161,19 @@ Immutable — no proxy, no upgrade path, no admin upgrade key:
 
 | Preset | Payment | Issuance | Compliance | Runtime size |
 |---|---|---|---|---|
-| `MinimalToken` | — | SimpleMinter | — | 6.5 KB |
-| `PermitToken` | EIP-2612 | MinterControl | Blacklist, Pause | 13.3 KB |
-| `Eip3009Token` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause | 14.9 KB |
-| `FullToken` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause, Seize | 16.4 KB |
+| `MinimalToken` | — | SimpleMinter | — | 6.2 KB |
+| `PermitToken` | EIP-2612 | MinterControl | Blacklist, Pause | 13.0 KB |
+| `Eip3009Token` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause | 14.7 KB |
+| `FullToken` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause, Seize | 16.2 KB |
 
 Upgradeable — implementations for an ERC-1967 proxy, adding `UpgradeControl` to
 the same composition:
 
 | Preset | Same modules as | Runtime size |
 |---|---|---|
-| `UpgradeablePermitToken` | `PermitToken` | 16.1 KB |
-| `UpgradeableEip3009Token` | `Eip3009Token` | 17.9 KB |
-| `UpgradeableFullToken` | `FullToken` | 19.4 KB |
+| `UpgradeablePermitToken` | `PermitToken` | 15.9 KB |
+| `UpgradeableEip3009Token` | `Eip3009Token` | 17.7 KB |
+| `UpgradeableFullToken` | `FullToken` | 19.2 KB |
 
 ### What each one can do
 

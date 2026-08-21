@@ -27,6 +27,17 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- OpenZeppelin moved from v5.1.0 to v5.6.1 -- both submodules and the npm
+  canary together, as the procedure in CONTRIBUTING.md says. No source
+  change was needed; the storage-slot and upgrade tests pass unchanged, and
+  every preset's runtime shrank by roughly 0.3 KB. No published advisory
+  affected v5.1.0; this is a currency move, made while the release line was
+  being cut. Two things it carries: `ERC1967Proxy` now refuses construction
+  with empty init data (the kit always passes `initializeToken`), and its
+  creation code changed, so proxy addresses move along with the presets'.
+  `Initializable` and `UUPSUpgradeable` are imported from
+  `@openzeppelin/contracts` directly; the upgradeable package's copies are
+  aliases slated for removal in v6.
 - **Every CREATE2 address differs from v0.1.0.** The presets' creation code
   changed (EIP-3009 entry points, the MinterControl and UpgradeControl
   checks), and the address is a function of it. `docs/deploying.md` now says
