@@ -13,7 +13,7 @@ cd contracts
 forge test --gas-report
 ```
 
-solc 0.8.24, optimizer on at 200 runs, OpenZeppelin v5.1.0 -- the settings in
+solc 0.8.24, optimizer on at 200 runs, OpenZeppelin v5.6.1 -- the settings in
 `foundry.toml`. Expect drift when any of those change; the table is a
 snapshot, not a promise. Re-run the command above after touching a module and
 compare.
@@ -59,13 +59,13 @@ where the money goes).
 | `transfer` | ~29,000 | ~58,500 |
 | `transferFrom` (allowance already set) | ~25,000 | -- |
 | `approve` | ~31,000 | ~54,300 |
-| `transferWithAuthorization` (bytes) | ~65,000 | ~103,700 |
-| `transferWithAuthorization` (v,r,s) | -- | ~98,800 |
-| `receiveWithAuthorization` | ~41,000 | ~99,200 |
-| `permit` (v,r,s) | ~58,000 | ~91,400 |
-| `permit` (bytes) | -- | ~96,400 |
-| `cancelAuthorization` (bytes) | ~61,500 | -- |
-| `cancelAuthorization` (v,r,s) | ~61,200 | -- |
+| `transferWithAuthorization` (bytes) | ~65,000 | ~102,000 |
+| `transferWithAuthorization` (v,r,s) | -- | ~98,600 |
+| `receiveWithAuthorization` | ~41,000 | ~99,000 |
+| `permit` (v,r,s) | ~58,000 | ~91,300 |
+| `permit` (bytes) | -- | ~94,800 |
+| `cancelAuthorization` (bytes) | ~61,300 | -- |
+| `cancelAuthorization` (v,r,s) | ~61,000 | -- |
 
 What the signature paths buy and cost: an EIP-3009 transfer is a plain
 transfer plus signature recovery (~3,000), the EIP-712 digest, and one cold
