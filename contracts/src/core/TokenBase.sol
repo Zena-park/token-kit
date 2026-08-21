@@ -66,9 +66,9 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  *  accounts, covering both.
  *
  *  This is also why the payment modules take a `bytes signature` alongside the
- *  `(v, r, s)` triple the original EIP texts specify: a contract signature does
- *  not fit in 65 bytes. The triple stays so that integrations compiled against
- *  the spec selectors keep working. USDC made the same addition in FiatTokenV2_2.
+ *  `(v, r, s)` triple the EIPs define: a contract signature does not fit in 65
+ *  bytes. The triple stays because it is what the EIPs define and what
+ *  integrations written against them call; the bytes form is the extension.
  *
  * @dev Storage
  *

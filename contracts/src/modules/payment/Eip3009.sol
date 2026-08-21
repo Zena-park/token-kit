@@ -45,13 +45,13 @@ import {IEip3009} from "../../interfaces/IEip3009.sol";
  *
  * @dev Why each function comes in two forms
  *
- *  The spec's `(v, r, s)` triple is what every integration built before
- *  contract signers existed calls; a `bytes signature` is what an ERC-1271
- *  account needs, since its signature does not fit in 65 bytes. USDC's
- *  FiatTokenV2_2 added the second form without removing the first, and
- *  `IEip3009` declares both so the selectors an x402 client or wallet SDK
- *  compiled against USDC all dispatch here. The triple packs into the bytes
- *  form and shares everything after that.
+ *  The `(v, r, s)` triple is the function the EIP defines, and is what an
+ *  integration written against the EIP calls. A `bytes signature` is what an
+ *  ERC-1271 account needs, since a contract signature does not fit in 65
+ *  bytes; that form is an extension, declared in `IEip3009` with the
+ *  signatures the ecosystem already uses for it. Both are exposed so neither
+ *  kind of integration has to special-case this token. The triple packs into
+ *  the bytes form and shares everything after that.
  *
  * @dev Interaction with the compliance modules
  *
@@ -67,10 +67,8 @@ abstract contract Eip3009 is TokenBase, IEip3009 {
     // ---------------------------------------------------------------
     // Type hashes
     //
-    // These are the literal EIP-3009 type strings hashed as-is, which makes them
-    // byte-identical to USDC's. Together with the two entry-point forms, an x402
-    // client or facilitator built against USDC works against this token with no
-    // changes.
+    // These are the literal EIP-3009 type strings hashed as-is. A signature
+    // produced by any EIP-3009 client verifies here unchanged.
     // ---------------------------------------------------------------
 
     // The EIP-712 type string is normative -- wrapping it makes it hard to diff
@@ -151,7 +149,7 @@ abstract contract Eip3009 is TokenBase, IEip3009 {
         );
     }
 
-    /// @notice Spec form of {transferWithAuthorization}. EOA signers only.
+    /// @notice EIP-3009 form of {transferWithAuthorization}. EOA signers only.
     function transferWithAuthorization(
         address from,
         address to,
@@ -195,7 +193,7 @@ abstract contract Eip3009 is TokenBase, IEip3009 {
         );
     }
 
-    /// @notice Spec form of {receiveWithAuthorization}. EOA signers only.
+    /// @notice EIP-3009 form of {receiveWithAuthorization}. EOA signers only.
     function receiveWithAuthorization(
         address from,
         address to,
@@ -228,7 +226,7 @@ abstract contract Eip3009 is TokenBase, IEip3009 {
         emit AuthorizationCanceled(authorizer, nonce);
     }
 
-    /// @notice Spec form of {cancelAuthorization}. EOA signers only.
+    /// @notice EIP-3009 form of {cancelAuthorization}. EOA signers only.
     function cancelAuthorization(address authorizer, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)
         external
     {

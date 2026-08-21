@@ -8,10 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- `Eip3009`: the spec's `(v, r, s)` form of `transferWithAuthorization`,
-  `receiveWithAuthorization` and `cancelAuthorization`, alongside the `bytes`
-  form -- the same six entry points as USDC's FiatTokenV2_2, declared in the
-  new `IEip3009` interface. Integrations compiled against USDC's original
+- `Eip3009`: the `(v, r, s)` functions EIP-3009 defines --
+  `transferWithAuthorization`, `receiveWithAuthorization`,
+  `cancelAuthorization` -- alongside the existing `bytes` forms, which are the
+  ERC-1271 extension. Both are declared in the new `IEip3009` interface, the
+  file integrators compile against. Integrations written against the EIP's
   selectors now dispatch instead of reverting.
 - `TokenBase._packSignature`: the one place a `(v, r, s)` triple is laid out
   as the 65-byte signature the verifier takes; `Eip2612` uses it too.

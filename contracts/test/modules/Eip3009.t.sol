@@ -43,7 +43,7 @@ contract Eip3009Test is Helpers {
     // Compatibility
     // ---------------------------------------------------------------
 
-    /// @dev If these drift from USDC's, every x402 client has to special-case us.
+    /// @dev If these drift from the EIP's, every EIP-3009 client has to special-case us.
     function test_typehashes_match_the_spec_strings() public view {
         assertEq(
             token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(),
@@ -63,71 +63,51 @@ contract Eip3009Test is Helpers {
         );
     }
 
-    /// @dev `IEip3009` is the surface an integration compiled against USDC
-    ///      emits, and every preset with this module implements it, so the
-    ///      compiler already enforces the shape. What is pinned here is that
-    ///      the interface itself still spells USDC's six selectors -- renaming
-    ///      a parameter type (`uint8 v` to `uint256`) would silently change
-    ///      them and break every caller.
-    function test_interface_selectors_match_usdc() public pure {
-        // FiatTokenV2_2's six selectors, as deployed on mainnet.
-        assertEq(
-            bytes4(
-                keccak256(
-                    "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
-                )
-            ),
-            bytes4(0xe3ee160e)
-        );
-        assertEq(
-            bytes4(
-                keccak256(
-                    "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)"
-                )
-            ),
-            bytes4(0xcf092995)
-        );
-        assertEq(
-            bytes4(
-                keccak256(
-                    "receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
-                )
-            ),
-            bytes4(0xef55bec6)
-        );
-        assertEq(
-            bytes4(
-                keccak256(
-                    "receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)"
-                )
-            ),
-            bytes4(0x88b7ab63)
-        );
-        assertEq(
-            bytes4(keccak256("cancelAuthorization(address,bytes32,uint8,bytes32,bytes32)")),
-            bytes4(0x5a049a70)
-        );
-        assertEq(
-            bytes4(keccak256("cancelAuthorization(address,bytes32,bytes)")), bytes4(0xb7b72899)
-        );
-    }
+    /// @dev Every preset with this module implements `IEip3009`, so what the
+    ///      interface declares is what the token dispatches. This pins the
+    ///      declaration to the function signatures in the EIP text.
+    ///      Overloads cannot be named one at a time in Solidity, so the check
+    ///      goes through `type(I).interfaceId` -- the XOR of every selector the
+    ///      compiler derives from the declaration -- against the same XOR over
+    ///      the expected signatures. A changed parameter type fails here rather
+    ///      than in every caller.
+    function test_interface_matches_the_eip3009_signatures() public pure {
+        // The three functions EIP-3009 defines.
+        bytes4 eip = bytes4(
+            keccak256(
+                "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
+            )
+        )
+        ^ bytes4(
+            keccak256(
+                "receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
+            )
+        ) ^ bytes4(keccak256("cancelAuthorization(address,bytes32,uint8,bytes32,bytes32)"))
+        ^ bytes4(keccak256("authorizationState(address,bytes32)"));
 
-    /// @dev And the token really is the interface: each of the six signature
-    ///      strings above appears verbatim in `IEip3009`, which `Eip3009Token`
-    ///      implements, so this is a compile-time fact restated at run time.
-    function test_token_is_an_ieip3009() public view {
-        IEip3009 surface = IEip3009(address(token));
-        assertFalse(surface.authorizationState(payer, bytes32(0)));
+        // The ERC-1271 extension, with the signatures the ecosystem uses for it.
+        bytes4 extension = bytes4(
+            keccak256(
+                "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)"
+            )
+        )
+        ^ bytes4(
+            keccak256(
+                "receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)"
+            )
+        ) ^ bytes4(keccak256("cancelAuthorization(address,bytes32,bytes)"));
+
+        assertEq(type(IEip3009).interfaceId, eip ^ extension);
     }
 
     // ---------------------------------------------------------------
     // transferWithAuthorization
     // ---------------------------------------------------------------
 
-    /// @dev The spec-shaped form is what a pre-ERC-1271 integration calls. It
-    ///      must reach the same path as the bytes form: same nonce, same
-    ///      event, same transfer.
-    function test_transfer_spec_form_moves_funds_and_burns_the_nonce() public {
+    /// @dev The EIP's own form is what an integration written against it
+    ///      calls. It must reach the same path as the bytes form: same nonce,
+    ///      same event, same transfer.
+    function test_transfer_eip_form_moves_funds_and_burns_the_nonce() public {
         bytes32 nonce = keccak256("order-1");
         (uint8 v, bytes32 r, bytes32 s) = _signAuthVRS(
             token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(),
@@ -365,7 +345,7 @@ contract Eip3009Test is Helpers {
         token.transferWithAuthorization(payer, shop, 1000 * UNIT, 0, _future(), nonce, transferSig);
     }
 
-    function test_cancel_spec_form_burns_an_unspent_authorization() public {
+    function test_cancel_eip_form_burns_an_unspent_authorization() public {
         bytes32 nonce = keccak256("order-1");
         (uint8 v, bytes32 r, bytes32 s) = signTypedVRS(
             token,
@@ -488,7 +468,7 @@ contract Eip3009Test is Helpers {
         return keccak256(abi.encode(typehash, from, to, value, validAfter, validBefore, nonce));
     }
 
-    /// @dev Split form, for the spec-shaped entry points.
+    /// @dev Split form, for the entry points the EIP defines.
     function _signAuthVRS(
         bytes32 typehash,
         uint256 key,
