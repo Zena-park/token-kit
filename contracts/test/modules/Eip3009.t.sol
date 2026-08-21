@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 import {Helpers, MockSmartAccount} from "../helpers/Helpers.sol";
 import {Eip3009Token} from "../../src/presets/Eip3009Token.sol";
 import {Eip3009} from "../../src/modules/payment/Eip3009.sol";
+import {IEip3009} from "../../src/interfaces/IEip3009.sol";
 import {TokenBase} from "../../src/core/TokenBase.sol";
 import {Blacklist} from "../../src/modules/compliance/Blacklist.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -42,7 +43,7 @@ contract Eip3009Test is Helpers {
     // Compatibility
     // ---------------------------------------------------------------
 
-    /// @dev If these drift from USDC's, every x402 client has to special-case us.
+    /// @dev If these drift from the EIP's, every EIP-3009 client has to special-case us.
     function test_typehashes_match_the_spec_strings() public view {
         assertEq(
             token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(),
@@ -62,9 +63,76 @@ contract Eip3009Test is Helpers {
         );
     }
 
+    /// @dev Every preset with this module implements `IEip3009`, so what the
+    ///      interface declares is what the token dispatches. This pins the
+    ///      declaration to the function signatures in the EIP text.
+    ///      Overloads cannot be named one at a time in Solidity, so the check
+    ///      goes through `type(I).interfaceId` -- the XOR of every selector the
+    ///      compiler derives from the declaration -- against the same XOR over
+    ///      the expected signatures. A changed parameter type fails here rather
+    ///      than in every caller.
+    function test_interface_matches_the_eip3009_signatures() public pure {
+        // The three functions EIP-3009 defines.
+        bytes4 eip = bytes4(
+            keccak256(
+                "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
+            )
+        )
+        ^ bytes4(
+            keccak256(
+                "receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,uint8,bytes32,bytes32)"
+            )
+        ) ^ bytes4(keccak256("cancelAuthorization(address,bytes32,uint8,bytes32,bytes32)"))
+        ^ bytes4(keccak256("authorizationState(address,bytes32)"));
+
+        // The ERC-1271 extension, with the signatures the ecosystem uses for it.
+        bytes4 extension = bytes4(
+            keccak256(
+                "transferWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)"
+            )
+        )
+        ^ bytes4(
+            keccak256(
+                "receiveWithAuthorization(address,address,uint256,uint256,uint256,bytes32,bytes)"
+            )
+        ) ^ bytes4(keccak256("cancelAuthorization(address,bytes32,bytes)"));
+
+        assertEq(type(IEip3009).interfaceId, eip ^ extension);
+    }
+
     // ---------------------------------------------------------------
     // transferWithAuthorization
     // ---------------------------------------------------------------
+
+    /// @dev The EIP's own form is what an integration written against it
+    ///      calls. It must reach the same path as the bytes form: same nonce,
+    ///      same event, same transfer.
+    function test_transfer_eip_form_moves_funds_and_burns_the_nonce() public {
+        bytes32 nonce = keccak256("order-1");
+        (uint8 v, bytes32 r, bytes32 s) = _signAuthVRS(
+            token.TRANSFER_WITH_AUTHORIZATION_TYPEHASH(),
+            payerKey,
+            payer,
+            shop,
+            1000 * UNIT,
+            0,
+            _future(),
+            nonce
+        );
+
+        vm.prank(facilitator);
+        token.transferWithAuthorization(payer, shop, 1000 * UNIT, 0, _future(), nonce, v, r, s);
+
+        assertEq(token.balanceOf(shop), 1000 * UNIT);
+        assertTrue(token.authorizationState(payer, nonce));
+
+        // The nonce is shared with the bytes form, so neither can replay the other.
+        vm.prank(facilitator);
+        vm.expectRevert(Eip3009.AuthorizationAlreadyUsed.selector);
+        token.transferWithAuthorization(
+            payer, shop, 1000 * UNIT, 0, _future(), nonce, abi.encodePacked(r, s, v)
+        );
+    }
 
     function test_transfer_moves_funds_with_a_third_party_paying_gas() public {
         bytes32 nonce = keccak256("order-1");
@@ -277,6 +345,24 @@ contract Eip3009Test is Helpers {
         token.transferWithAuthorization(payer, shop, 1000 * UNIT, 0, _future(), nonce, transferSig);
     }
 
+    function test_cancel_eip_form_burns_an_unspent_authorization() public {
+        bytes32 nonce = keccak256("order-1");
+        (uint8 v, bytes32 r, bytes32 s) = signTypedVRS(
+            token,
+            payerKey,
+            keccak256(abi.encode(token.CANCEL_AUTHORIZATION_TYPEHASH(), payer, nonce))
+        );
+
+        vm.prank(facilitator);
+        token.cancelAuthorization(payer, nonce, v, r, s);
+        assertTrue(token.authorizationState(payer, nonce));
+
+        // Cancelling twice, in either form, is refused.
+        vm.prank(facilitator);
+        vm.expectRevert(Eip3009.AuthorizationAlreadyUsed.selector);
+        token.cancelAuthorization(payer, nonce, abi.encodePacked(r, s, v));
+    }
+
     /// @dev Revoking a leaked signature is exactly what a holder needs during an
     ///      incident, so it is deliberately reachable while paused.
     function test_cancel_still_works_while_paused() public {
@@ -369,10 +455,36 @@ contract Eip3009Test is Helpers {
         return block.timestamp + 1 hours;
     }
 
-    /// @dev Both authorization types hash the same six fields; only the type
-    ///      hash differs. The contract deliberately spells each one out, so a
-    ///      divergence between them is caught by
-    ///      `test_transfer_signature_does_not_work_for_receive`.
+    /// @dev The one place this suite spells out the authorization field order.
+    function _authHash(
+        bytes32 typehash,
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce
+    ) private pure returns (bytes32) {
+        return keccak256(abi.encode(typehash, from, to, value, validAfter, validBefore, nonce));
+    }
+
+    /// @dev Split form, for the entry points the EIP defines.
+    function _signAuthVRS(
+        bytes32 typehash,
+        uint256 key,
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce
+    ) private view returns (uint8 v, bytes32 r, bytes32 s) {
+        return signTypedVRS(
+            token, key, _authHash(typehash, from, to, value, validAfter, validBefore, nonce)
+        );
+    }
+
+    /// @dev Packed form, for the ERC-1271-capable entry points.
     function _signAuth(
         bytes32 typehash,
         uint256 key,
@@ -384,9 +496,7 @@ contract Eip3009Test is Helpers {
         bytes32 nonce
     ) private view returns (bytes memory) {
         return signTyped(
-            token,
-            key,
-            keccak256(abi.encode(typehash, from, to, value, validAfter, validBefore, nonce))
+            token, key, _authHash(typehash, from, to, value, validAfter, validBefore, nonce)
         );
     }
 }

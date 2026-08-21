@@ -141,7 +141,7 @@ wants and resolves the overrides.
 
 | Module | Group | What it adds | What it costs |
 |---|---|---|---|
-| `Eip3009` | payment | Signature transfers with random `bytes32` nonces; any caller submits and pays the gas | Three external functions, three type hashes and a nonce map in the token |
+| `Eip3009` | payment | Signature transfers with random `bytes32` nonces; any caller submits and pays the gas. The EIP's `(v, r, s)` functions plus a `bytes` form for ERC-1271 signers | Three functions in two forms each, three type hashes and a nonce map in the token |
 | `Eip2612` | payment | `permit` — allowance by signature, ERC-1271 capable | Sequential nonces; concurrent authorizations collide |
 | `MinterControl` | issuance | Owner / Controller / Minter / Guardian, drawdown mint budget, timelocked appointments | Two custodies to run |
 | `SimpleMinter` | issuance | One role, unlimited mint | No ceiling |
@@ -161,19 +161,19 @@ Immutable — no proxy, no upgrade path, no admin upgrade key:
 
 | Preset | Payment | Issuance | Compliance | Runtime size |
 |---|---|---|---|---|
-| `MinimalToken` | — | SimpleMinter | — | 6.3 KB |
-| `PermitToken` | EIP-2612 | MinterControl | Blacklist, Pause | 13.0 KB |
-| `Eip3009Token` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause | 14.2 KB |
-| `FullToken` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause, Seize | 15.7 KB |
+| `MinimalToken` | — | SimpleMinter | — | 6.5 KB |
+| `PermitToken` | EIP-2612 | MinterControl | Blacklist, Pause | 13.3 KB |
+| `Eip3009Token` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause | 14.9 KB |
+| `FullToken` | EIP-3009, EIP-2612 | MinterControl | Blacklist, Pause, Seize | 16.4 KB |
 
 Upgradeable — implementations for an ERC-1967 proxy, adding `UpgradeControl` to
 the same composition:
 
 | Preset | Same modules as | Runtime size |
 |---|---|---|
-| `UpgradeablePermitToken` | `PermitToken` | 15.7 KB |
-| `UpgradeableEip3009Token` | `Eip3009Token` | 17.1 KB |
-| `UpgradeableFullToken` | `FullToken` | 18.7 KB |
+| `UpgradeablePermitToken` | `PermitToken` | 16.1 KB |
+| `UpgradeableEip3009Token` | `Eip3009Token` | 17.9 KB |
+| `UpgradeableFullToken` | `FullToken` | 19.4 KB |
 
 ### What each one can do
 

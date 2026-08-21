@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import {TokenBase} from "../../core/TokenBase.sol";
+import {IEip3009} from "../../interfaces/IEip3009.sol";
 
 /**
  * @title Eip3009
@@ -42,6 +43,16 @@ import {TokenBase} from "../../core/TokenBase.sol";
  *  Shipping only the first of the pair is worse than shipping neither: contracts
  *  that detect `transferWithAuthorization` reasonably assume its partner exists.
  *
+ * @dev Why each function comes in two forms
+ *
+ *  The `(v, r, s)` triple is the function the EIP defines, and is what an
+ *  integration written against the EIP calls. A `bytes signature` is what an
+ *  ERC-1271 account needs, since a contract signature does not fit in 65
+ *  bytes; that form is an extension, declared in `IEip3009` with the
+ *  signatures the ecosystem already uses for it. Both are exposed so neither
+ *  kind of integration has to special-case this token. The triple packs into
+ *  the bytes form and shares everything after that.
+ *
  * @dev Interaction with the compliance modules
  *
  *  These functions carry no `whenNotPaused` modifier of their own. Every balance
@@ -52,13 +63,12 @@ import {TokenBase} from "../../core/TokenBase.sol";
  *  `cancelAuthorization` moves no balance and is reachable while paused, so a
  *  holder can revoke a leaked signature during an incident.
  */
-abstract contract Eip3009 is TokenBase {
+abstract contract Eip3009 is TokenBase, IEip3009 {
     // ---------------------------------------------------------------
     // Type hashes
     //
-    // These are the literal EIP-3009 type strings hashed as-is, which makes them
-    // byte-identical to USDC's. An x402 client or facilitator built against USDC
-    // works against this token with no changes.
+    // These are the literal EIP-3009 type strings hashed as-is. A signature
+    // produced by any EIP-3009 client verifies here unchanged.
     // ---------------------------------------------------------------
 
     // The EIP-712 type string is normative -- wrapping it makes it hard to diff
@@ -98,11 +108,8 @@ abstract contract Eip3009 is TokenBase {
     }
 
     // ---------------------------------------------------------------
-    // Events / errors
+    // Errors
     // ---------------------------------------------------------------
-
-    event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
-    event AuthorizationCanceled(address indexed authorizer, bytes32 indexed nonce);
 
     error AuthorizationNotYetValid();
     error AuthorizationExpired();
@@ -111,7 +118,7 @@ abstract contract Eip3009 is TokenBase {
 
     // ---------------------------------------------------------------
 
-    /// @notice Whether an authorization has been spent or cancelled.
+    /// @inheritdoc IEip3009
     function authorizationState(address authorizer, bytes32 nonce) external view returns (bool) {
         return _eip3009Storage().authorizationStates[authorizer][nonce];
     }
@@ -129,26 +136,34 @@ abstract contract Eip3009 is TokenBase {
         uint256 validBefore,
         bytes32 nonce,
         bytes memory signature
-    ) external {
-        _requireValidAuthorization(from, nonce, validAfter, validBefore);
-        _requireValidSignature(
+    ) public {
+        _transferWithAuthorization(
+            TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
             from,
-            keccak256(
-                abi.encode(
-                    TRANSFER_WITH_AUTHORIZATION_TYPEHASH,
-                    from,
-                    to,
-                    value,
-                    validAfter,
-                    validBefore,
-                    nonce
-                )
-            ),
+            to,
+            value,
+            validAfter,
+            validBefore,
+            nonce,
             signature
         );
+    }
 
-        _markAuthorizationAsUsed(from, nonce);
-        _transfer(from, to, value);
+    /// @notice EIP-3009 form of {transferWithAuthorization}. EOA signers only.
+    function transferWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        transferWithAuthorization(
+            from, to, value, validAfter, validBefore, nonce, _packSignature(v, r, s)
+        );
     }
 
     /**
@@ -164,34 +179,39 @@ abstract contract Eip3009 is TokenBase {
         uint256 validBefore,
         bytes32 nonce,
         bytes memory signature
-    ) external {
+    ) public {
         if (to != _msgSender()) revert CallerMustBePayee();
-
-        _requireValidAuthorization(from, nonce, validAfter, validBefore);
-        _requireValidSignature(
+        _transferWithAuthorization(
+            RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
             from,
-            keccak256(
-                abi.encode(
-                    RECEIVE_WITH_AUTHORIZATION_TYPEHASH,
-                    from,
-                    to,
-                    value,
-                    validAfter,
-                    validBefore,
-                    nonce
-                )
-            ),
+            to,
+            value,
+            validAfter,
+            validBefore,
+            nonce,
             signature
         );
+    }
 
-        _markAuthorizationAsUsed(from, nonce);
-        _transfer(from, to, value);
+    /// @notice EIP-3009 form of {receiveWithAuthorization}. EOA signers only.
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        receiveWithAuthorization(
+            from, to, value, validAfter, validBefore, nonce, _packSignature(v, r, s)
+        );
     }
 
     /// @notice Burn an unspent authorization so it can never be submitted.
-    function cancelAuthorization(address authorizer, bytes32 nonce, bytes memory signature)
-        external
-    {
+    function cancelAuthorization(address authorizer, bytes32 nonce, bytes memory signature) public {
         if (_eip3009Storage().authorizationStates[authorizer][nonce]) {
             revert AuthorizationAlreadyUsed();
         }
@@ -206,25 +226,45 @@ abstract contract Eip3009 is TokenBase {
         emit AuthorizationCanceled(authorizer, nonce);
     }
 
+    /// @notice EIP-3009 form of {cancelAuthorization}. EOA signers only.
+    function cancelAuthorization(address authorizer, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)
+        external
+    {
+        cancelAuthorization(authorizer, nonce, _packSignature(v, r, s));
+    }
+
     // ---------------------------------------------------------------
     // Internal
     // ---------------------------------------------------------------
 
-    function _requireValidAuthorization(
-        address authorizer,
-        bytes32 nonce,
+    /// @dev The two authorization types hash the same six fields under
+    ///      different type strings, so a signature for one never satisfies the
+    ///      other; which one is being checked is the only thing the callers
+    ///      differ on once the payee check has passed.
+    function _transferWithAuthorization(
+        bytes32 typehash,
+        address from,
+        address to,
+        uint256 value,
         uint256 validAfter,
-        uint256 validBefore
-    ) private view {
+        uint256 validBefore,
+        bytes32 nonce,
+        bytes memory signature
+    ) private {
         if (block.timestamp <= validAfter) revert AuthorizationNotYetValid();
         if (block.timestamp >= validBefore) revert AuthorizationExpired();
-        if (_eip3009Storage().authorizationStates[authorizer][nonce]) {
-            revert AuthorizationAlreadyUsed();
-        }
-    }
 
-    function _markAuthorizationAsUsed(address authorizer, bytes32 nonce) private {
-        _eip3009Storage().authorizationStates[authorizer][nonce] = true;
-        emit AuthorizationUsed(authorizer, nonce);
+        Eip3009Storage storage $ = _eip3009Storage();
+        if ($.authorizationStates[from][nonce]) revert AuthorizationAlreadyUsed();
+
+        _requireValidSignature(
+            from,
+            keccak256(abi.encode(typehash, from, to, value, validAfter, validBefore, nonce)),
+            signature
+        );
+
+        $.authorizationStates[from][nonce] = true;
+        emit AuthorizationUsed(from, nonce);
+        _transfer(from, to, value);
     }
 }

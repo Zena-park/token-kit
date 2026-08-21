@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `Eip3009`: the `(v, r, s)` functions EIP-3009 defines --
+  `transferWithAuthorization`, `receiveWithAuthorization`,
+  `cancelAuthorization` -- alongside the existing `bytes` forms, which are the
+  ERC-1271 extension. Both are declared in the new `IEip3009` interface, the
+  file integrators compile against. Integrations written against the EIP's
+  selectors now dispatch instead of reverting.
+- `TokenBase._packSignature`: the one place a `(v, r, s)` triple is laid out
+  as the 65-byte signature the verifier takes; `Eip2612` uses it too.
+
+### Changed
+
+- Runtime sizes grew by 0.7 KB on the presets that include `Eip3009`; the
+  README tables and `docs/gas.md` carry the new numbers.
+
 ## [0.1.0] - 2026-08-19
 
 Initial release.

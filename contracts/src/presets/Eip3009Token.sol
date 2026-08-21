@@ -34,7 +34,7 @@ import {EmergencyPause} from "../modules/compliance/EmergencyPause.sol";
  *
  * @dev The argument against it
  *
- *  It is more code inside the token: three external functions, three type
+ *  It is more code inside the token: three functions in two forms, three type
  *  hashes, and a nonce mapping that the issuer maintains and an auditor reviews.
  *  PermitToken gets a comparable result with none of it.
  *
