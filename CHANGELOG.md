@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/security-review.md` rewritten against v0.1.1: one record of what the
+  release guarantees, with the review history as a table instead of
+  accumulated amendments.
+
 ## [0.1.1] - 2026-08-22
 
 The security-audit release: every finding of the 2026-08-21 audit and the
