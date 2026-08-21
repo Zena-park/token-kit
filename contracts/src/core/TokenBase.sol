@@ -65,9 +65,10 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  *  SignatureChecker dispatches to ECDSA for EOAs and to ERC-1271 for contract
  *  accounts, covering both.
  *
- *  This is also why the modules take `bytes signature` rather than the `(v, r, s)`
- *  triple the original EIP texts specify: a contract signature does not fit in
- *  64 bytes. USDC made the same change in FiatTokenV2_2.
+ *  This is also why the payment modules take a `bytes signature` alongside the
+ *  `(v, r, s)` triple the original EIP texts specify: a contract signature does
+ *  not fit in 65 bytes. The triple stays so that integrations compiled against
+ *  the spec selectors keep working. USDC made the same addition in FiatTokenV2_2.
  *
  * @dev Storage
  *
@@ -403,5 +404,15 @@ abstract contract TokenBase is
         if (!SignatureChecker.isValidSignatureNow(signer, digest, signature)) {
             revert InvalidSignature();
         }
+    }
+
+    /**
+     * @dev The spec-form `(v, r, s)` triple in the 65-byte layout the verifier
+     *      above takes. The layout is a fact about the verifier, so it is
+     *      spelled once here rather than in each module that exposes a spec
+     *      form entry point.
+     */
+    function _packSignature(uint8 v, bytes32 r, bytes32 s) internal pure returns (bytes memory) {
+        return abi.encodePacked(r, s, v);
     }
 }

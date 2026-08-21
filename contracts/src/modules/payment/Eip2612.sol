@@ -65,7 +65,7 @@ abstract contract Eip2612 is TokenBase, NoncesUpgradeable {
         bytes32 r,
         bytes32 s
     ) external {
-        _permit(owner, spender, value, deadline, abi.encodePacked(r, s, v));
+        _permit(owner, spender, value, deadline, _packSignature(v, r, s));
     }
 
     /// @notice Extended form accepting an arbitrary-length signature, so that

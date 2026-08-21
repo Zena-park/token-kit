@@ -59,11 +59,13 @@ where the money goes).
 | `transfer` | ~29,000 | ~58,500 |
 | `transferFrom` (allowance already set) | ~25,000 | -- |
 | `approve` | ~31,000 | ~54,300 |
-| `transferWithAuthorization` | ~65,000 | ~103,700 |
+| `transferWithAuthorization` (bytes) | ~65,000 | ~103,700 |
+| `transferWithAuthorization` (v,r,s) | -- | ~98,800 |
 | `receiveWithAuthorization` | ~41,000 | ~99,200 |
 | `permit` (v,r,s) | ~58,000 | ~91,400 |
 | `permit` (bytes) | -- | ~96,400 |
-| `cancelAuthorization` | ~61,500 | -- |
+| `cancelAuthorization` (bytes) | ~61,500 | -- |
+| `cancelAuthorization` (v,r,s) | ~61,200 | -- |
 
 What the signature paths buy and cost: an EIP-3009 transfer is a plain
 transfer plus signature recovery (~3,000), the EIP-712 digest, and one cold

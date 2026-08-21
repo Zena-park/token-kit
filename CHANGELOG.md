@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `Eip3009`: the spec's `(v, r, s)` form of `transferWithAuthorization`,
+  `receiveWithAuthorization` and `cancelAuthorization`, alongside the `bytes`
+  form -- the same six entry points as USDC's FiatTokenV2_2, declared in the
+  new `IEip3009` interface. Integrations compiled against USDC's original
+  selectors now dispatch instead of reverting.
+- `TokenBase._packSignature`: the one place a `(v, r, s)` triple is laid out
+  as the 65-byte signature the verifier takes; `Eip2612` uses it too.
+
+### Changed
+
+- Runtime sizes grew by 0.7 KB on the presets that include `Eip3009`; the
+  README tables and `docs/gas.md` carry the new numbers.
+
 ## [0.1.0] - 2026-08-19
 
 Initial release.
