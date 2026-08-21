@@ -30,6 +30,16 @@ import {TokenBase} from "../../core/TokenBase.sol";
  *  `(v, r, s)` form and a `bytes` form are exposed: the triple keeps existing
  *  integrations working, the bytes form is what a contract signature needs.
  *
+ * @dev A permit can be front-run, harmlessly
+ *
+ *  Anyone who sees a `permit` call in the mempool can submit the same signature
+ *  first. The allowance lands exactly as signed either way; what fails is the
+ *  original transaction, with `InvalidSignature`, because the nonce has moved.
+ *  This is the standard EIP-2612 property, not something this module can
+ *  close. A contract that calls `permit` and then `transferFrom` in one
+ *  transaction should wrap the `permit` in a try/catch and proceed if the
+ *  allowance is already in place.
+ *
  * @dev The nonce is sequential, and that is a real limitation
  *
  *  EIP-2612 mandates a counter. Two permits signed by the same holder must be

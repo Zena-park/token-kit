@@ -96,6 +96,7 @@ abstract contract UpgradeControl is TokenBase, Guardian, UUPSUpgradeable {
     error NoScheduledUpgrade(bytes32 id);
     error UpgradeNotReady(uint48 eta);
     error UpgradeExpired(uint48 eta);
+    error ValueNotAccepted();
 
     /**
      * @notice The identifier an upgrade is scheduled and cancelled under.
@@ -162,8 +163,14 @@ abstract contract UpgradeControl is TokenBase, Guardian, UUPSUpgradeable {
      *      `super` runs it along with the ERC-1822 check, and still refuses to
      *      run outside a proxy; a caller without the role reverts before
      *      anything this function wrote is kept.
+     *
+     *      The function is `payable` because the one it overrides is. A token
+     *      has no use for ether and no way to send it back out, so any value
+     *      that arrived here would sit in the proxy for good; it is refused.
      */
     function upgradeToAndCall(address implementation, bytes memory data) public payable override {
+        if (msg.value != 0) revert ValueNotAccepted();
+
         bytes32 id = upgradeId(implementation, data);
         UpgradeControlStorage storage $ = _upgradeControlStorage();
         uint48 eta = $.scheduled[id];

@@ -480,4 +480,40 @@ contract UpgradeableTest is Helpers {
         token.upgradeToAndCall(v2, "");
         assertEq(UpgradeableEip3009TokenV2(address(token)).version(), 2);
     }
+
+    // ---------------------------------------------------------------
+    // Call context and value
+    // ---------------------------------------------------------------
+
+    /// @dev The bare implementation cannot be upgraded in place: its schedule
+    ///      is empty and, having no admin, can never be filled, so the
+    ///      override refuses before OpenZeppelin's `onlyProxy` check would.
+    function test_the_implementation_refuses_an_upgrade_called_directly() public {
+        address v2 = address(new UpgradeableEip3009TokenV2(6));
+        bytes32 id = token.upgradeId(v2, "");
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(UpgradeControl.NoScheduledUpgrade.selector, id));
+        UpgradeControl(implementation).upgradeToAndCall(v2, "");
+    }
+
+    function test_an_upgrade_refuses_ether() public {
+        address v2 = address(new UpgradeableEip3009TokenV2(6));
+
+        vm.prank(admin);
+        token.scheduleUpgrade(v2, "");
+        vm.warp(block.timestamp + token.UPGRADE_DELAY());
+
+        vm.deal(admin, 1 ether);
+        vm.prank(admin);
+        vm.expectRevert(UpgradeControl.ValueNotAccepted.selector);
+        token.upgradeToAndCall{value: 1 wei}(v2, "");
+    }
+
+    function test_cancelling_an_unknown_upgrade_reverts() public {
+        bytes32 id = keccak256("nothing");
+        vm.prank(guardian);
+        vm.expectRevert(abi.encodeWithSelector(UpgradeControl.NoScheduledUpgrade.selector, id));
+        token.cancelUpgrade(id);
+    }
 }

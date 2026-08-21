@@ -23,17 +23,20 @@ contract MockSmartAccount is IERC1271 {
         owner = _owner;
     }
 
-    /// @dev `ECDSA.recover` takes the packed form directly and rejects the
-    ///      malleable and zero-address results a raw `ecrecover` returns, which
-    ///      is what a real account would want too. Splitting r/s/v by hand here
-    ///      would be a second, weaker copy of the code the token already uses.
+    /// @dev `ECDSA.tryRecover` takes the packed form directly and reports the
+    ///      malleable and zero-address results a raw `ecrecover` returns as
+    ///      errors, which is what a real account would want too. An ERC-1271
+    ///      account answers a bad signature with the failure value rather than
+    ///      reverting -- the caller's `staticcall` treats both as invalid, but
+    ///      the failure value is the contract of the interface.
     function isValidSignature(bytes32 hash, bytes memory signature)
         external
         view
         override
         returns (bytes4)
     {
-        if (ECDSA.recover(hash, signature) == owner) {
+        (address signer, ECDSA.RecoverError err,) = ECDSA.tryRecover(hash, signature);
+        if (err == ECDSA.RecoverError.NoError && signer == owner) {
             return IERC1271.isValidSignature.selector;
         }
         return 0xffffffff;

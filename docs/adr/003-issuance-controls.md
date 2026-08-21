@@ -82,6 +82,22 @@ Unfreezing is admin-only. Fast to stop, deliberate to resume.
 That last row is the load-bearing operational requirement. The design is only
 worth anything if the two keys are actually held separately.
 
+The contract enforces the part of that it can see: an address is a Controller
+or a Minter, never both. The direct form — appointing a key over itself — is
+the obvious one. The indirect form is A managing B while B manages A: each key
+then refills the budget the other spends, and one custody holding both is the
+same failure as one key holding both ends of one pair. Both forms are refused
+at scheduling and again at execution.
+
+Removing a Controller does not cancel appointments still pending over the
+Minter it frees; one inside its window becomes executable again. It was
+announced by the admin, it is visible as an event, and the Guardian can cancel
+it. An admin removing a Controller scans `ControllerScheduled` for that Minter
+first; `pendingController` is keyed by Controller, and several may be pending
+over one Minter, which is also why the contract does not clear them itself — a
+by-Minter index would be a set with removal on every schedule, execute and
+cancel, for a case that is not inconsistent state.
+
 ## Alternatives
 
 **A plain `MINTER_ROLE`.** Shipped as `SimpleMinter`, because it is the honest

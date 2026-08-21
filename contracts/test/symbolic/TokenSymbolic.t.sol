@@ -320,4 +320,50 @@ contract FullTokenSymbolic is Test {
             assert(false);
         } catch {}
     }
+
+    // ---------------------------------------------------------------
+    // The allowance boundary
+    //
+    // Under a pause or a listing, revocation is always possible and a raise
+    // never is. `_isAllowanceRaise` decides which is which; these pin it.
+    // ---------------------------------------------------------------
+
+    /// @dev The property, parameterised by the gate the caller has applied:
+    ///      approving at or below the current allowance succeeds and lands,
+    ///      approving above it reverts.
+    function _checkOnlyRaisesAreGated(address spender, uint256 current, uint256 next) private {
+        vm.prank(holder);
+        try token.approve(spender, next) {
+            assert(next <= current);
+            assert(token.allowance(holder, spender) == next);
+        } catch {
+            assert(next > current);
+        }
+    }
+
+    /// @notice While paused, only a raise is refused.
+    function check_pause_gates_raises_only(address spender, uint256 current, uint256 next) public {
+        vm.assume(spender != address(0) && spender != holder);
+        vm.prank(holder);
+        token.approve(spender, current);
+
+        vm.prank(pauser);
+        token.pause();
+
+        _checkOnlyRaisesAreGated(spender, current, next);
+    }
+
+    /// @notice With the spender listed, only a raise is refused.
+    function check_blacklist_gates_raises_only(address spender, uint256 current, uint256 next)
+        public
+    {
+        vm.assume(spender != address(0) && spender != holder);
+        vm.prank(holder);
+        token.approve(spender, current);
+
+        vm.prank(blacklister);
+        token.blacklist(spender);
+
+        _checkOnlyRaisesAreGated(spender, current, next);
+    }
 }

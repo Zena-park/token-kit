@@ -195,7 +195,12 @@ The admin holds `DEFAULT_ADMIN_ROLE` and grants everything else:
 Issuance is separate and takes a day: the admin schedules a Controller, the delay
 passes, anyone executes the appointment, and the Controller then funds a Minter.
 That sequence is deliberate — see
-[the issuance controls note](adr/003-issuance-controls.md).
+[the issuance controls note](adr/003-issuance-controls.md). Two things to keep
+in mind when operating it: an address can be a Controller or a Minter but not
+both, in any pairing; and removing a Controller leaves any appointment still
+pending over its Minter in place, so scan `ControllerScheduled` events for that
+Minter before freeing it (`pendingController` is keyed by Controller, and more
+than one may be pending over the same Minter).
 
 The admin key of an upgradeable token can eventually change any rule the token
 enforces. A multisig is the minimum, and the delay only buys observers time to

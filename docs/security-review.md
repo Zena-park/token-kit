@@ -10,8 +10,8 @@ design trade-off explicitly documented in the code and docs.
 
 | Metric | Result |
 |---|---|
-| Foundry tests | 121 / 121 passing (8 suites, including the deploy script) |
-| Halmos symbolic properties | 19 / 19 verified |
+| Foundry tests | 136 / 136 passing (8 suites, including the deploy script) |
+| Halmos symbolic properties | 21 / 21 verified |
 | Slither (75 detectors) | 0 findings |
 | Secret / key exposure | none |
 | Source files reviewed | 18 |
@@ -58,8 +58,9 @@ design trade-off explicitly documented in the code and docs.
 
 ### Issuance control — MinterControl — safe
 
-- The Controller/Minter separation invariants (no self-management, 1:1 mapping)
-  are checked at both scheduling and execution — a single leaked key cannot mint
+- The Controller/Minter separation invariants (an address is a Controller or a
+  Minter, never both, and pairs are 1:1) are checked at both scheduling and
+  execution — a single leaked key cannot mint
   beyond the remaining budget.
 - `burn` does not refund the mint budget, blocking the mint-burn-mint loop.
 - The Guardian freeze is immediate while unfreezing is admin-only — the correct
@@ -104,6 +105,14 @@ design trade-off explicitly documented in the code and docs.
 3. **The admin of an upgradeable preset can eventually change any rule the token
    enforces.** A documented, inherent trade-off. A multisig plus a standing
    Guardian is the assumed operating model.
+4. **Removing a Controller does not cancel appointments still pending over the
+   Minter it frees.** One inside its window becomes executable again. It was
+   announced by the admin, is re-checked at execution, and the Guardian can
+   cancel it; clearing it in the contract would need a by-Minter set. The
+   operating procedure is in ADR-003 and `docs/deploying.md`.
+5. **A `permit` can be front-run with the same signature.** Standard EIP-2612
+   behaviour: the allowance lands as signed and the original call reverts.
+   Integrators wrap `permit` in try/catch; noted in the module header.
 
 ## Minor observations (no security impact)
 
@@ -137,8 +146,8 @@ design trade-off explicitly documented in the code and docs.
 | Step | Detail |
 |---|---|
 | Full manual review | 1 core, 9 modules, 7 presets, and the Deploy script — all 18 source files read in full |
-| Dynamic verification | `forge test` — 121 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
-| Symbolic verification | Halmos over `test/symbolic/TokenSymbolic.t.sol` — 19 properties verified: supply preservation, exact balance/allowance accounting, mint role and budget bounds, blacklist send/receive blocking, pause totality, mint freeze, seize preconditions, and the Controller/Minter structure (authority split, 1:1 mapping, timelock + veto, revocation leaves nothing mintable) |
+| Dynamic verification | `forge test` — 136 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
+| Symbolic verification | Halmos over `test/symbolic/TokenSymbolic.t.sol` — 21 properties verified: supply preservation, exact balance/allowance accounting, mint role and budget bounds, blacklist send/receive blocking, pause totality, the allowance-raise boundary under a pause and a listing, mint freeze, seize preconditions, and the Controller/Minter structure (authority split, 1:1 mapping, timelock + veto, revocation leaves nothing mintable) |
 | Static analysis | Slither, 75 detectors — 0 findings |
 | Secret scan | private key / mnemonic pattern scan — no exposure |
 | Docs cross-check | `docs/deploying.md` and 5 ADRs — code matches the documented threat model. (A later pass found `deploying.md` still describing issuer capture from `msg.sender` after the script had moved to the broadcast account; corrected with the deploy-script tests.) |

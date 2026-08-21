@@ -7,6 +7,7 @@ import {Blacklist} from "../../src/modules/compliance/Blacklist.sol";
 import {TokenBase} from "../../src/core/TokenBase.sol";
 import {Seize} from "../../src/modules/compliance/Seize.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract ComplianceTest is Helpers {
     FullToken token;
@@ -467,5 +468,49 @@ contract ComplianceTest is Helpers {
         vm.prank(successor);
         vm.expectRevert(TokenBase.LastAdmin.selector);
         token.renounceRole(adminRole, successor);
+    }
+
+    // ---------------------------------------------------------------
+    // Seizure edge cases
+    // ---------------------------------------------------------------
+
+    /// @dev A seizure moves through `_transfer`, so a balance that has since
+    ///      shrunk below the scheduled amount fails the ordinary way, and the
+    ///      schedule survives the failed attempt.
+    function test_a_seizure_larger_than_the_balance_fails_and_stays_scheduled() public {
+        vm.prank(blacklister);
+        token.blacklist(sanctioned);
+
+        vm.prank(rescuer);
+        token.scheduleSeize(sanctioned, authority, 2000 * UNIT);
+        bytes32 id = token.seizeId(sanctioned, authority, 2000 * UNIT);
+        vm.warp(block.timestamp + token.SEIZE_DELAY());
+
+        vm.prank(rescuer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector, sanctioned, 1000 * UNIT, 2000 * UNIT
+            )
+        );
+        token.executeSeize(sanctioned, authority, 2000 * UNIT);
+
+        assertTrue(token.pendingSeize(id) != 0);
+    }
+
+    /// @dev The veto outlives the window: a lapsed schedule can still be
+    ///      cleared, so stale entries do not accumulate as pending.
+    function test_a_lapsed_seizure_can_still_be_cancelled() public {
+        vm.prank(blacklister);
+        token.blacklist(sanctioned);
+
+        vm.prank(rescuer);
+        token.scheduleSeize(sanctioned, authority, 100 * UNIT);
+        bytes32 id = token.seizeId(sanctioned, authority, 100 * UNIT);
+        uint48 eta = token.pendingSeize(id);
+
+        vm.warp(uint256(eta) + token.SEIZE_WINDOW() + 1);
+        vm.prank(guardian);
+        token.cancelSeize(sanctioned, authority, 100 * UNIT);
+        assertEq(token.pendingSeize(id), 0);
     }
 }
