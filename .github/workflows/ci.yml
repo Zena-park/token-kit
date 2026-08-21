@@ -1,6 +1,11 @@
 # package.json owns the gate list; the checks job invokes `npm run check`
 # so CI and a local run cannot drift apart. Slither and Halmos — the two
 # analyzers from docs/security-review.md — run as their own jobs.
+#
+# Forge is pinned to an exact release. solc is pinned in foundry.toml, so the
+# bytecode -- and every CREATE2 address -- never depended on the forge
+# version; `forge lint` does, and it runs on every build. Bump it by hand
+# together with the local toolchain.
 name: CI
 
 on:
@@ -17,18 +22,20 @@ jobs:
     name: fmt · lint · solhint · test · sizes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
 
-      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: v1.5.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: npm
 
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             contracts/cache
@@ -47,11 +54,11 @@ jobs:
     name: slither
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
 
-      - uses: crytic/slither-action@v0.4.2
+      - uses: crytic/slither-action@b52cc1cbfee9ca3e8722dd5224299d16c9a6b80f # v0.4.2
         with:
           target: contracts
           slither-config: contracts/slither.config.json
@@ -64,13 +71,15 @@ jobs:
       run:
         working-directory: contracts
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
 
-      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: v1.5.1
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 

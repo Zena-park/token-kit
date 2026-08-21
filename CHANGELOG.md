@@ -25,6 +25,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- CI: actions pinned to commit SHAs and forge to an exact release;
+  `foundry.lock` records all three libraries; Dependabot no longer tracks
+  submodules (see CONTRIBUTING.md).
 - `Deploy.s.sol`: an explicit `existingImplementation` that is empty, not
   UUPS, or not a kit token now fails as `NotAnImplementation` instead of a
   bare revert from whichever probe it did not answer. `docs/deploying.md` and
