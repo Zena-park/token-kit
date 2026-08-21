@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format follows
   ERC-1271 extension. Both are declared in the new `IEip3009` interface, the
   file integrators compile against. Integrations written against the EIP's
   selectors now dispatch instead of reverting.
+- `IEip2612`: the EIP-2612 surface (`IERC20Permit`) plus the `bytes` form, the
+  counterpart of `IEip3009`; `Eip2612` implements it.
 - `TokenBase._packSignature`: the one place a `(v, r, s)` triple is laid out
   as the 65-byte signature the verifier takes; `Eip2612` uses it too.
 
