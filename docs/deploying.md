@@ -69,17 +69,17 @@ the broadcasting key — it goes into the init code, and therefore into the
 address. Nobody else can slip in between, on this chain or on one you have not
 reached yet.
 
-The consequence is that the broadcasting key must be the one you intend to hand
-over with. Broadcasting from a different key leaves a deployed token that nobody
-can ever hand over. The script prints `issuer` alongside `admin set`, and
+The issuer is read off the broadcast itself, not off the script's
+`msg.sender`, so whichever key signs the deployment transactions is the key
+that can hand the token over — there is no way to broadcast from one key and
+record another as issuer. The consequence is that the broadcasting key must be
+the one you intend to keep until `initializeAdmin` has landed; the script sends
+that call in the same broadcast, prints `issuer` alongside `admin set`, and
 `verifyAdmin` re-checks the grant at any time.
 
-**Pass `--sender` and make it the broadcasting key.** The script captures the
-issuer from `msg.sender`, and in a Forge script that is whatever `--sender`
-names — without the flag it is Foundry's default sender, not your key. A
-mismatch makes the in-script `initializeAdmin` revert as `NotIssuer` during
-simulation, so nothing reaches the chain, but the deployment does not go out
-until the two agree.
+**Pass `--sender` as the broadcasting key** so that simulation and broadcast
+run as the same account and the predicted address printed during simulation is
+the one the deployment lands on.
 
 The result has no proxy, no upgrade path and no admin upgrade key. Bugs are
 permanent.

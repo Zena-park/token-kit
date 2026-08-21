@@ -50,9 +50,10 @@ import {UpgradeableFullToken} from "../src/presets/upgradeable/UpgradeableFullTo
  *
  *  What closes that second call to everyone else is the issuer: the token
  *  records it at deployment -- it is in the init code, and therefore in the
- *  address -- and only the issuer may call `initializeAdmin`. Broadcasting from
- *  a different key than the one passed as `issuer` leaves a deployed token that
- *  nobody can hand over, so `_report` prints both and `verifyAdmin` confirms the
+ *  address -- and only the issuer may call `initializeAdmin`. The script reads
+ *  the issuer off the broadcast itself (`vm.readCallers` inside the broadcast),
+ *  so whatever key signs the deployment is, by construction, the key that can
+ *  hand the token over. `_report` prints it and `verifyAdmin` confirms the
  *  grant landed.
  */
 contract Deploy is Script {
@@ -243,12 +244,7 @@ contract Deploy is Script {
         // which preset the code was built from, so an explicit address is the
         // operator asserting that part.
         if (existingImplementation != address(0)) {
-            if (
-                IERC1822Proxiable(existingImplementation).proxiableUUID()
-                    != ERC1967Utils.IMPLEMENTATION_SLOT
-            ) revert NotAnImplementation(existingImplementation);
-
-            uint8 actual = TokenBase(existingImplementation).decimals();
+            uint8 actual = _implementationDecimals(existingImplementation);
             if (actual != decimals) revert DecimalsMismatch(actual, decimals);
         }
 
@@ -312,6 +308,26 @@ contract Deploy is Script {
         if (reuseExisting && deployed.code.length != 0) return deployed;
         (bool ok,) = CREATE2_FACTORY.call(abi.encodePacked(salt, initCode));
         if (!ok || deployed.code.length == 0) revert Create2Failed(deployed);
+    }
+
+    /// @dev What an explicit implementation must answer: ERC-1822's
+    ///      `proxiableUUID()` with the ERC-1967 implementation slot, and this
+    ///      kit's `decimals()`. Anything else -- no code, no answer, a
+    ///      different slot -- is refused with one typed error. Without the
+    ///      `try`, an address that does not implement a probe reverts with no
+    ///      data, and the operator is left to guess which probe it was.
+    function _implementationDecimals(address candidate) private view returns (uint8) {
+        if (candidate.code.length == 0) revert NotAnImplementation(candidate);
+        try IERC1822Proxiable(candidate).proxiableUUID() returns (bytes32 slot) {
+            if (slot != ERC1967Utils.IMPLEMENTATION_SLOT) revert NotAnImplementation(candidate);
+        } catch {
+            revert NotAnImplementation(candidate);
+        }
+        try TokenBase(candidate).decimals() returns (uint8 d) {
+            return d;
+        } catch {
+            revert NotAnImplementation(candidate);
+        }
     }
 
     /// @notice Confirms the admin landed where it was meant to.

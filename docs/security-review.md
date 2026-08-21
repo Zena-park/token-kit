@@ -10,7 +10,7 @@ design trade-off explicitly documented in the code and docs.
 
 | Metric | Result |
 |---|---|
-| Foundry tests | 103 / 103 passing (7 suites) |
+| Foundry tests | 121 / 121 passing (8 suites, including the deploy script) |
 | Halmos symbolic properties | 19 / 19 verified |
 | Slither (75 detectors) | 0 findings |
 | Secret / key exposure | none |
@@ -78,8 +78,14 @@ design trade-off explicitly documented in the code and docs.
 
 - The issuer is derived from the broadcast key, and the salt carries the
   deployer's 20-byte prefix — blocking cross-chain address squatting.
-- Reusing an existing implementation is validated up front via `proxiableUUID()`
-  and `decimals()`.
+- An explicit implementation to reuse is probed before anything is broadcast:
+  the ERC-1822 `proxiableUUID()` answer is checked and `decimals()` is compared,
+  each behind a `try` so a wrong address fails as `NotAnImplementation` rather
+  than as a bare revert. The check is script-side -- it protects the operator's
+  own run -- and cannot see which preset the code was built from; that part is
+  the operator's assertion. Covered by `test/script/Deploy.t.sol`, which also
+  pins address determinism, issuer == broadcaster, implementation reuse, and
+  that a finished proxy's `initializeToken` is closed.
 - The ERC-7201 storage slot constants are pinned to their labels by
   `test/StorageSlots.t.sol` using OZ `SlotDerivation` — preventing storage
   relocation accidents across upgrades.
@@ -122,7 +128,7 @@ design trade-off explicitly documented in the code and docs.
   `src/` — no behavioral change, no forwarder exists), and `scheduleSeize`
   accepted a zero amount (now refused with `ZeroAmount`, checked at the
   scheduling gate only since the seize id commits to the amount; covered by
-  `test_a_zero_amount_seizure_cannot_be_scheduled`). All 103 tests, Halmos
+  `test_a_zero_amount_seizure_cannot_be_scheduled`). All tests, Halmos
   19/19, and Slither 0-findings re-verified after the change; hot-path gas is
   unchanged and the guardian-modifier paths got marginally cheaper.
 
@@ -131,11 +137,11 @@ design trade-off explicitly documented in the code and docs.
 | Step | Detail |
 |---|---|
 | Full manual review | 1 core, 9 modules, 7 presets, and the Deploy script — all 18 source files read in full |
-| Dynamic verification | `forge test` — all 103 tests across 7 suites passing (including ERC-7201 slot pinning) |
+| Dynamic verification | `forge test` — 121 tests across 8 suites passing (ERC-7201 slot pinning, deploy script) |
 | Symbolic verification | Halmos over `test/symbolic/TokenSymbolic.t.sol` — 19 properties verified: supply preservation, exact balance/allowance accounting, mint role and budget bounds, blacklist send/receive blocking, pause totality, mint freeze, seize preconditions, and the Controller/Minter structure (authority split, 1:1 mapping, timelock + veto, revocation leaves nothing mintable) |
 | Static analysis | Slither, 75 detectors — 0 findings |
 | Secret scan | private key / mnemonic pattern scan — no exposure |
-| Docs cross-check | `docs/deploying.md` and 5 ADRs — code matches the documented threat model |
+| Docs cross-check | `docs/deploying.md` and 5 ADRs — code matches the documented threat model. (A later pass found `deploying.md` still describing issuer capture from `msg.sender` after the script had moved to the broadcast account; corrected with the deploy-script tests.) |
 
 ---
 

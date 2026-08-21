@@ -17,8 +17,19 @@ All notable changes to this project are documented here. The format follows
 - `TokenBase._packSignature`: the one place a `(v, r, s)` triple is laid out
   as the 65-byte signature the verifier takes; `Eip2612` uses it too.
 
+- `test/script/Deploy.t.sol`: the deploy script now has a test suite --
+  address prediction for immutable tokens and proxies, issuer == broadcaster,
+  implementation reuse keyed by preset and decimals, the finished proxy's
+  `initializeToken` being closed, and the checks on an explicit
+  implementation.
+
 ### Changed
 
+- `Deploy.s.sol`: an explicit `existingImplementation` that is empty, not
+  UUPS, or not a kit token now fails as `NotAnImplementation` instead of a
+  bare revert from whichever probe it did not answer. `docs/deploying.md` and
+  the script header now describe the issuer as read off the broadcast, which
+  is what the script has done since `vm.readCallers` was adopted.
 - Runtime sizes grew by 0.7 KB on the presets that include `Eip3009`; the
   README tables and `docs/gas.md` carry the new numbers.
 
